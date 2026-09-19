@@ -1,0 +1,110 @@
+.join {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-inline: var(--space-4);
+  padding-block: var(--space-12);
+}
+
+.join__card {
+  width: 100%;
+  max-width: 420px;
+  background: var(--gold);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+  box-shadow: 0 12px 32px rgba(43, 42, 38, 0.18);
+}
+
+.join__title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-display);
+  font-weight: 400;
+  line-height: 1.05;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+
+.join__body {
+  margin: var(--space-3) 0 0;
+  color: var(--ink);
+  font-size: var(--text-body);
+  line-height: 1.5;
+}
+
+.join__status {
+  margin: 0;
+  color: var(--ink);
+  font-size: var(--text-body);
+}
+
+.join__form {
+  display: flex;
+  flex-direction: column;
+}
+
+.join__label {
+  margin: var(--space-6) 0 var(--space-2);
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: var(--text-small);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+
+.join__input {
+  width: 100%;
+  /* 16px min prevents iOS zoom-on-focus and honors the a11y floor. */
+  font-size: var(--text-body);
+  font-family: var(--font-body);
+  color: var(--ink);
+  background: var(--cream);
+  border: 2px solid var(--ink);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+  min-height: 48px;
+}
+
+.join__input:focus-visible {
+  outline: 3px solid var(--kodak-red);
+  outline-offset: 2px;
+}
+
+.join__error {
+  margin: var(--space-2) 0 0;
+  color: var(--error);
+  font-weight: 600;
+  font-size: var(--text-small);
+}
+
+.join__submit {
+  margin-top: var(--space-6);
+  min-height: 56px;
+  border: none;
+  border-radius: var(--radius-pill);
+  background: var(--kodak-red);
+  color: var(--on-dark);
+  font-family: var(--font-display);
+  font-size: var(--text-h2);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.join__submit:hover:not(:disabled) {
+  filter: brightness(1.05);
+}
+
+.join__submit:focus-visible {
+  outline: 3px solid var(--ink);
+  outline-offset: 2px;
+}
+
+.join__submit:disabled {
+  filter: saturate(0.5);
+  cursor: default;
+}

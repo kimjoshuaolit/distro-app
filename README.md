@@ -31,7 +31,7 @@ npm run lint     # run ESLint
 ## Configuration
 
 Client-safe config is read from `VITE_`-prefixed environment variables. Copy
-`.env.example` to `.env` for local dev (the real values arrive in Story 1.2):
+`.env.example` to `.env` for local dev:
 
 ```bash
 cp .env.example .env
@@ -39,6 +39,41 @@ cp .env.example .env
 
 `.env` is gitignored. Secrets (Supabase service-role key, R2 credentials) never
 live in the client — only in Supabase Edge Function env.
+
+## Supabase local development
+
+Backend (Postgres, RLS, Edge Functions) runs locally via the Supabase CLI on
+Docker. **Prerequisite: Docker Desktop running.** The CLI is a dev dependency,
+so use `npx supabase`.
+
+```bash
+npx supabase start                       # boot local Postgres + Auth + Edge runtime (first run pulls images)
+npx supabase db reset                    # apply migrations + seed.sql (a fresh DB)
+npx supabase status                      # prints the local API URL + anon key
+npx supabase functions serve join-event  # serve the Edge Function locally
+```
+
+Put the **API URL** and **anon key** from `supabase status` into `.env` as
+`VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY`, then run `npm run dev`.
+
+The seed creates three test events:
+- **open** — `/j/00000000-0000-0000-0000-000000000001`
+- **ended** (window passed) — `/j/00000000-0000-0000-0000-000000000002`
+- **not yet open** (future window) — `/j/00000000-0000-0000-0000-000000000003`
+
+Stop the stack with `npx supabase stop`.
+
+### Deploying the backend to a hosted project (later)
+
+When you're ready to go live (needs a Supabase account):
+
+```bash
+npx supabase link --project-ref <your-project-ref>
+npx supabase db push                     # apply migrations to the cloud DB
+npx supabase functions deploy join-event
+```
+
+Then set the hosted project's URL + anon key as the app's production env vars.
 
 ## Deploy to Cloudflare Pages
 
