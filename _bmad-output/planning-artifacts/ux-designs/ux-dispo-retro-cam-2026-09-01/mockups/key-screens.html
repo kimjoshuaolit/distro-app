@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>dispo-retro-cam — Key Screens</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#141210;color:#eee;font-family:'Archivo',-apple-system,system-ui,sans-serif;padding:24px 16px 60px;line-height:1.45}
+  h1{font-size:1.4rem;text-align:center;margin-bottom:4px}
+  .sub{text-align:center;color:#8a8177;font-size:.82rem;margin-bottom:26px}
+  .row{display:flex;flex-wrap:wrap;gap:28px;justify-content:center;align-items:flex-start}
+  .col{width:300px;max-width:100%}
+  .label{text-align:center;font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;color:#8a8177;margin-bottom:10px}
+  .grain{position:absolute;inset:0;z-index:1;opacity:.12;pointer-events:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)'/%3E%3C/svg%3E")}
+  /* phone shell */
+  .phone{aspect-ratio:9/19.5;border-radius:30px;padding:12px;position:relative;overflow:hidden;box-shadow:0 20px 50px rgba(0,0,0,.5)}
+  /* ---- Camera (full Kodak Sunset) ---- */
+  .cam{background:#1A120C}
+  .cam .brackets{position:absolute;inset:16px;z-index:2;pointer-events:none}
+  .cam .brackets i{position:absolute;width:22px;height:22px;border:3px solid #F5C518;opacity:.85}
+  .cam .brackets i:nth-child(1){top:0;left:0;border-right:0;border-bottom:0}
+  .cam .brackets i:nth-child(2){top:0;right:0;border-left:0;border-bottom:0}
+  .cam .brackets i:nth-child(3){bottom:0;left:0;border-right:0;border-top:0}
+  .cam .brackets i:nth-child(4){bottom:0;right:0;border-left:0;border-top:0}
+  .statusbar{position:relative;z-index:3;display:flex;justify-content:space-between;align-items:center;padding:6px 6px 0}
+  .name{font-size:.72rem;color:#FBF3DE;display:flex;align-items:center;gap:5px}
+  .name b{width:8px;height:8px;border-radius:50%;background:#E1341E;display:inline-block}
+  .counter{font-family:Impact,'Anton',sans-serif;font-size:1.5rem;color:#F5C518;letter-spacing:.04em}
+  .counter small{font-size:.6rem;color:#C4622D;display:block;text-align:right;letter-spacing:.18em;margin-top:-4px}
+  .vfcenter{position:relative;z-index:2;height:56%;display:flex;align-items:center;justify-content:center;color:rgba(251,243,222,.4);font-size:.75rem}
+  .stamp{position:absolute;right:22px;bottom:150px;z-index:4;font-family:'Courier New',monospace;font-weight:700;color:#FF8A1E;font-size:.9rem;text-shadow:0 0 8px rgba(255,138,30,.6)}
+  .controls{position:relative;z-index:3;display:flex;align-items:center;justify-content:center;gap:24px;padding-top:10px}
+  .toggle{display:flex;flex-direction:column;gap:4px;font-size:.58rem;color:#8a8177;text-align:center}
+  .toggle .on{color:#F5C518;font-weight:700}
+  .shutter{width:64px;height:64px;border-radius:50%;background:#E1341E;border:5px solid #F5C518;box-shadow:0 4px 0 rgba(0,0,0,.35),inset 0 -3px 6px rgba(0,0,0,.3)}
+  .flipbtn{width:34px;height:34px;border-radius:50%;border:2px solid #8a8177}
+  .upload{position:absolute;left:0;right:0;bottom:6px;z-index:3;text-align:center;font-size:.62rem;color:#6E8B3D}
+  /* ---- Reveal (softened) ---- */
+  .reveal{background:#20130C;display:flex;flex-direction:column;justify-content:space-between}
+  .rvtop{position:relative;z-index:3;text-align:center;padding-top:20px}
+  .rvtop .k{font-size:.62rem;letter-spacing:.22em;text-transform:uppercase;color:#C4622D}
+  .rvtop h2{font-family:Georgia,serif;font-style:italic;font-weight:500;color:#FBF3DE;font-size:1.35rem;margin-top:4px}
+  .stage{position:relative;z-index:2;margin:16px 10px;border-radius:10px;background:linear-gradient(160deg,#3a2415,#20130C);aspect-ratio:16/10;display:flex;align-items:center;justify-content:center;border:1px solid rgba(245,197,24,.25)}
+  .play{width:60px;height:60px;border-radius:50%;background:rgba(251,243,222,.95);display:flex;align-items:center;justify-content:center}
+  .play::after{content:"";border-left:20px solid #20130C;border-top:12px solid transparent;border-bottom:12px solid transparent;margin-left:5px}
+  .letterbox{position:absolute;left:0;right:0;height:14px;background:#0d0805;z-index:3}
+  .rvcap{position:relative;z-index:3;text-align:center;color:#FBF3DE;padding:0 20px}
+  .rvcap p{font-family:Georgia,serif;font-style:italic;font-size:.9rem;opacity:.9}
+  .rolls{position:relative;z-index:3;display:flex;gap:8px;justify-content:center;padding:14px 12px 22px;flex-wrap:wrap}
+  .roll{width:52px}
+  .roll .pic{aspect-ratio:1;background:#4a3a2a;border:3px solid #FBF3DE;border-radius:2px}
+  .roll span{display:block;text-align:center;font-size:.56rem;color:#C9B79A;margin-top:3px;font-family:Georgia,serif;font-style:italic}
+  .note{max-width:660px;margin:26px auto 0;font-size:.78rem;color:#8a8177;text-align:center}
+</style></head>
+<body>
+  <h1>Kodak Sunset — the two hero screens</h1>
+  <div class="sub">Bold on the camera, softened on the reveal. Same family, two moods.</div>
+  <div class="row">
+
+    <div class="col">
+      <div class="label">G2 · Guest Camera (full warmth)</div>
+      <div class="phone cam">
+        <div class="grain"></div>
+        <div class="brackets"><i></i><i></i><i></i><i></i></div>
+        <div class="statusbar">
+          <div class="name"><b></b> ROSA</div>
+          <div class="counter">18 · 3<small>PHOTOS · CLIPS</small></div>
+        </div>
+        <div class="vfcenter">live viewfinder</div>
+        <div class="stamp">'26 09 04</div>
+        <div class="controls">
+          <div class="flipbtn"></div>
+          <div class="shutter"></div>
+          <div class="toggle"><span class="on">PHOTO</span><span>VIDEO</span></div>
+        </div>
+        <div class="upload">✓ your shots are saved</div>
+      </div>
+    </div>
+
+    <div class="col">
+      <div class="label">C1 · Couple's Reveal (softened)</div>
+      <div class="phone reveal">
+        <div class="grain"></div>
+        <div class="rvtop"><div class="k">Your wedding · developed</div><h2>From your people</h2></div>
+        <div class="stage">
+          <div class="letterbox" style="top:0"></div>
+          <div class="play"></div>
+          <div class="letterbox" style="bottom:0"></div>
+        </div>
+        <div class="rvcap"><p>“Press play before you scroll.”</p></div>
+        <div class="rolls">
+          <div class="roll"><div class="pic"></div><span>Rosa</span></div>
+          <div class="roll"><div class="pic"></div><span>Ben</span></div>
+          <div class="roll"><div class="pic"></div><span>Ana</span></div>
+          <div class="roll"><div class="pic"></div><span>+97</span></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+  <div class="note">Camera: bold red shutter + gold chrome + glowing orange date stamp, minimal chrome over the viewfinder, "shots are saved" reassurance. Reveal: montage plays first (one Play), rolls attributed by name underneath, warm and quiet — not the loud camera skin.</div>
+</body></html>

@@ -1,0 +1,57 @@
+/*
+ * Kodak Sunset — design tokens (from DESIGN.md).
+ * The single source of truth for color, type, spacing, and shape.
+ * Reference these vars everywhere; never hard-code a raw value in a component.
+ */
+:root {
+  /* Brand — "Kodak Sunset" */
+  --gold: #f5c518; /* primary brand, chrome accents, counter */
+  --kodak-red: #e1341e; /* shutter, primary actions */
+  --cream: #fbf3de; /* paper / light surface */
+  --ink: #2b2a26; /* primary text on cream */
+  --amber: #c4622d; /* warm secondary accent */
+  --stamp-orange: #ff8a1e; /* date-stamp glow */
+
+  /* Camera environment */
+  --viewfinder-bg: #1a120c; /* dark camera body / capture backdrop */
+  --on-dark: #fbf3de; /* text/icons on the dark camera */
+
+  /* Reveal (softened warm variant) */
+  --reveal-bg: #20130c; /* deep warm brown for montage stage */
+  --reveal-surface: #fbf3de;
+  --reveal-accent: #f5c518; /* gold leads; red used sparingly here */
+
+  /* Functional */
+  --success: #6e8b3d;
+  --error: #b23a2e;
+  --muted: #8a8177;
+  --hairline: #e4d8be;
+
+  /* Typography */
+  --font-display: 'Anton', 'Archivo Black', Impact, sans-serif; /* chunky poster display */
+  --font-body: 'Archivo', -apple-system, system-ui, sans-serif; /* clean body */
+  --font-stamp: 'DSEG7', 'Courier New', monospace; /* 7-seg / mono date stamp */
+
+  --text-display: 2.25rem;
+  --text-h1: 1.5rem;
+  --text-h2: 1.15rem;
+  --text-body: 1rem; /* 16px floor for legibility */
+  --text-small: 0.8rem;
+  --text-counter: 1.5rem;
+
+  /* Spacing — 8pt grid (steps 4/8/12/16/24/32/48) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-12: 48px;
+
+  /* Rounded scale */
+  --radius-none: 0;
+  --radius-sm: 6px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+  --radius-pill: 999px;
+}
