@@ -2,10 +2,19 @@ import { useEffect, useRef, useState } from 'react'
 import { Navigate, useParams } from 'react-router-dom'
 import { useCamera } from '../capture/useCamera.ts'
 import { capturePhoto } from '../capture/capturePhoto.ts'
+import { useClipRecorder } from '../capture/useClipRecorder.ts'
+import { saveClip } from '../capture/captureClip.ts'
 import { getGuestSession, updateRemaining } from '../lib/guestSession.ts'
 import Counter from '../ui/Counter.tsx'
 import Shutter from '../ui/Shutter.tsx'
+import RecordButton from '../ui/RecordButton.tsx'
+import ModeToggle, { type CaptureMode } from '../ui/ModeToggle.tsx'
 import './Camera.css'
+
+function formatElapsed(ms: number): string {
+  const s = Math.min(10, Math.floor(ms / 1000))
+  return `0:${String(s).padStart(2, '0')}`
+}
 
 // Best-effort shutter click. The web can't read the iOS hardware mute switch,
 // so this is a nicety; the flash + counter tick are the real feedback.
@@ -37,9 +46,12 @@ export default function Camera() {
   const videoRef = useRef<HTMLVideoElement>(null)
   const capturingRef = useRef(false) // synchronous re-entry guard (survives rapid taps)
   const photosRef = useRef(session?.photosRemaining ?? 0)
+  const clipsRef = useRef(session?.clipsRemaining ?? 0)
   const flashTimer = useRef<number | null>(null)
+  const recorder = useClipRecorder(camera.stream)
   const [photos, setPhotos] = useState(session?.photosRemaining ?? 0)
-  const [clips] = useState(session?.clipsRemaining ?? 0)
+  const [clips, setClips] = useState(session?.clipsRemaining ?? 0)
+  const [mode, setMode] = useState<CaptureMode>('photo')
   const [capturing, setCapturing] = useState(false)
   const [videoReady, setVideoReady] = useState(false)
   const [flash, setFlash] = useState(false)
@@ -96,9 +108,44 @@ export default function Camera() {
     setCapturing(false)
   }
 
+  async function handleClipComplete(blob: Blob) {
+    if (!session) return
+    try {
+      await saveClip(blob, { eventId: eventToken, guestId: session.guestId })
+    } catch (err) {
+      const full = err instanceof Error && /quota/i.test(`${err.name} ${err.message}`)
+      setCaptureError(
+        full
+          ? 'Your phone’s storage is full — free up some space to keep filming.'
+          : 'That clip didn’t save — try again.',
+      )
+      return
+    }
+    // Spend a clip ONLY once it is durably stored (AD-1).
+    const next = Math.max(0, clipsRef.current - 1)
+    clipsRef.current = next
+    setClips(next)
+    updateRemaining(eventToken, { clipsRemaining: next })
+    playTick()
+    setFlash(true)
+    if (flashTimer.current) window.clearTimeout(flashTimer.current)
+    flashTimer.current = window.setTimeout(() => setFlash(false), 180)
+  }
+
+  function handleRecordToggle() {
+    if (recorder.recording) {
+      recorder.stop()
+    } else if (clipsRef.current > 0 && videoReady) {
+      setCaptureError(null)
+      recorder.start(handleClipComplete)
+    }
+  }
+
   if (!session) return <Navigate to={`/j/${eventToken}`} replace />
 
-  const rollFinished = photos <= 0
+  const photosFinished = photos <= 0
+  const clipsFinished = clips <= 0
+  const currentFinished = mode === 'photo' ? photosFinished : clipsFinished
 
   return (
     <main className="camera">
@@ -161,36 +208,66 @@ export default function Camera() {
             onLoadedData={() => setVideoReady(true)}
           />
 
-          {flash && <div className="camera__flash" aria-hidden="true" />}
-
-          {rollFinished && (
-            <div className="camera__finished" role="status">
-              <p className="camera__finished-title">Your photo roll is finished 🎞️</p>
-              <p className="camera__finished-body">That’s all 25 — nicely shot.</p>
+          {recorder.recording && (
+            <div className="camera__rec" role="status" aria-label="Recording">
+              <span className="camera__rec-dot" aria-hidden="true" />
+              REC {formatElapsed(recorder.elapsedMs)}
             </div>
           )}
 
-          {captureError && (
+          {flash && <div className="camera__flash" aria-hidden="true" />}
+
+          {currentFinished && !recorder.recording && (
+            <div className="camera__finished" role="status">
+              <p className="camera__finished-title">
+                {mode === 'photo' ? 'Your photo roll is finished 🎞️' : 'Your clips are all used 🎬'}
+              </p>
+              <p className="camera__finished-body">
+                {mode === 'photo' ? 'That’s all 25 — nicely shot.' : 'All 5 clips captured.'}
+              </p>
+            </div>
+          )}
+
+          {mode === 'video' && !recorder.supported && (
             <p className="camera__error" role="alert">
-              {captureError}
+              Clips aren’t supported on this browser.
+            </p>
+          )}
+          {(captureError || recorder.error) && (
+            <p className="camera__error" role="alert">
+              {captureError ?? recorder.error}
             </p>
           )}
 
           <div className="camera__controls">
-            <button
-              type="button"
-              className="camera__flip"
-              onClick={camera.switchCamera}
-              aria-label="Switch camera"
-            >
-              ⟲
-            </button>
-            <Shutter
-              onCapture={handleCapture}
-              disabled={rollFinished || !videoReady}
-              busy={capturing}
-            />
-            <span className="camera__spacer" aria-hidden="true" />
+            <div className="camera__modewrap">
+              <ModeToggle mode={mode} onChange={setMode} disabled={recorder.recording} />
+            </div>
+            <div className="camera__buttonrow">
+              <button
+                type="button"
+                className="camera__flip"
+                onClick={camera.switchCamera}
+                aria-label="Switch camera"
+                disabled={recorder.recording}
+              >
+                ⟲
+              </button>
+              {mode === 'photo' ? (
+                <Shutter
+                  onCapture={handleCapture}
+                  disabled={photosFinished || !videoReady}
+                  busy={capturing}
+                />
+              ) : (
+                <RecordButton
+                  recording={recorder.recording}
+                  disabled={(!recorder.recording && (clipsFinished || !videoReady)) || !recorder.supported}
+                  onToggle={handleRecordToggle}
+                />
+              )}
+              <span className="camera__spacer" aria-hidden="true" />
+            </div>
           </div>
         </div>
       )}

@@ -1,0 +1,38 @@
+.modetoggle {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  background: rgba(26, 18, 12, 0.55);
+  border: 1px solid var(--gold);
+  border-radius: var(--radius-pill);
+}
+
+.modetoggle__btn {
+  min-height: 44px;
+  padding: 0 var(--space-4);
+  border: none;
+  background: transparent;
+  color: var(--on-dark);
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: var(--text-small);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+}
+
+.modetoggle__btn.is-active {
+  background: var(--gold);
+  color: var(--ink);
+}
+
+.modetoggle__btn:focus-visible {
+  outline: 2px solid var(--cream);
+  outline-offset: 2px;
+}
+
+.modetoggle__btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}

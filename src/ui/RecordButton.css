@@ -1,0 +1,55 @@
+.record {
+  width: 76px;
+  height: 76px;
+  min-width: 56px;
+  min-height: 56px;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  border: 5px solid var(--gold);
+  padding: 0;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.3);
+}
+
+.record__inner {
+  width: 54px;
+  height: 54px;
+  border-radius: var(--radius-pill);
+  background: var(--kodak-red);
+  transition:
+    border-radius 0.15s ease,
+    width 0.15s ease,
+    height 0.15s ease;
+}
+
+/* Recording: the disc becomes a rounded square (a "stop" affordance). */
+.record--on .record__inner {
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-sm);
+  animation: record-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes record-pulse {
+  50% {
+    opacity: 0.55;
+  }
+}
+
+.record:focus-visible {
+  outline: 3px solid var(--cream);
+  outline-offset: 3px;
+}
+
+.record:disabled {
+  border-color: var(--hairline);
+  cursor: default;
+}
+
+.record:disabled .record__inner {
+  background: var(--muted);
+  filter: saturate(0.4);
+}

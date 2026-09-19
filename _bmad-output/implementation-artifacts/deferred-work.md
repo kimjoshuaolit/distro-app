@@ -29,3 +29,15 @@ Surfaced during builds; revisit deliberately. Append-only.
 - source_spec: `spec-1-3-take-retro-photos.md`
   summary: Add a jsdom + React Testing Library harness (and a `*.test.tsx` include) so component/hook logic (Camera flow, useCamera error mapping) can be tested; today vitest runs node-only and the include glob is `*.test.ts`.
   evidence: The capture pipeline's pure seams are unit-tested, but Camera.tsx/useCamera.ts decision branches aren't reachable by the current toolchain, and a `*.test.tsx` would be silently skipped.
+
+- source_spec: `spec-1-4-record-video-clips.md`
+  summary: Request best-effort `navigator.storage.persist()` and handle IndexedDB eviction, since ~500KB × up to 5 clips (plus 25 photos) held locally before upload is materially more eviction-prone than photos alone (iOS Safari 7-day inactivity / storage-pressure eviction).
+  evidence: Nothing calls `persist()`; `saveClip`/`capturePhoto` surface QuotaExceeded (counter isn't spent) but there's no eviction guard. Best paired with Story 1.5's upload path so clips leave the device sooner.
+
+- source_spec: `spec-1-4-record-video-clips.md`
+  summary: Add automated coverage for `useClipRecorder` lifecycle (10s auto-stop, mic-denied silent fallback, double-tap in-flight guard, empty-blob skip, onerror teardown) and the `handleClipComplete` durable-before-decrement wiring.
+  evidence: These behaviors were verified only by manual browser E2E during the build (mediaSupport + captureClip pure seams are unit-tested); the hook/Camera branches need the jsdom+RTL harness above, plus mocks for MediaRecorder and getUserMedia.
+
+- source_spec: `spec-1-4-record-video-clips.md`
+  summary: Add an explicit `Shot.mimeType` field rather than relying on `blob.type` alone, to make the Story 1.6 playback/download path robust if a blob's type is ever dropped in transit.
+  evidence: `saveClip` persists the recorder blob with its `type`, but `db.ts` `Shot` has no dedicated mime field; adequate today, worth hardening for the viewer/upload.
