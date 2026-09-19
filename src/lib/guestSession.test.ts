@@ -3,6 +3,7 @@ import {
   getGuestSession,
   saveGuestSession,
   clearGuestSession,
+  updateRemaining,
   type GuestSession,
 } from './guestSession.ts'
 
@@ -65,6 +66,18 @@ describe('guestSession with working storage', () => {
     saveGuestSession(sample)
     clearGuestSession('evt-1')
     expect(getGuestSession('evt-1')).toBeNull()
+  })
+
+  it('updates remaining counts and persists them', () => {
+    saveGuestSession(sample)
+    const updated = updateRemaining('evt-1', { photosRemaining: 24 })
+    expect(updated?.photosRemaining).toBe(24)
+    expect(updated?.clipsRemaining).toBe(5) // untouched
+    expect(getGuestSession('evt-1')?.photosRemaining).toBe(24)
+  })
+
+  it('updateRemaining returns null when no session exists', () => {
+    expect(updateRemaining('missing', { photosRemaining: 1 })).toBeNull()
   })
 })
 

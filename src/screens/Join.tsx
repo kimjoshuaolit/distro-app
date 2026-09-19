@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { Link, useParams } from 'react-router-dom'
 import { getEventStatus, joinEvent, JoinError } from '../lib/api.ts'
 import { getGuestSession, saveGuestSession } from '../lib/guestSession.ts'
 import './Join.css'
@@ -115,8 +115,11 @@ export default function Join() {
           <>
             <h1 className="join__title">You’re in, {view.firstName}! 🎉</h1>
             <p className="join__body">
-              Your roll is ready: <strong>25 photos + 5 clips</strong>. The camera opens next.
+              Your roll is ready: <strong>25 photos + 5 clips</strong>, each one final.
             </p>
+            <Link className="join__submit join__submit--link" to={`/c/${eventToken}`}>
+              Start shooting
+            </Link>
           </>
         )}
 

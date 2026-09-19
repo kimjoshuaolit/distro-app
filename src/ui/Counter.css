@@ -1,0 +1,48 @@
+.counter {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  color: var(--gold);
+}
+
+.counter__pair {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.counter__num {
+  font-family: var(--font-display);
+  font-size: var(--text-counter);
+  line-height: 1;
+}
+
+.counter__label {
+  font-family: var(--font-body);
+  font-size: var(--text-small);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.85;
+}
+
+.counter__dot {
+  font-family: var(--font-display);
+  font-size: var(--text-counter);
+  color: var(--gold);
+}
+
+/* Near-empty and last-shot cues — color AND the label change (not color alone). */
+.counter__pair--low .counter__num {
+  color: var(--amber);
+}
+.counter__pair--low .counter__label {
+  color: var(--amber);
+}
+.counter__pair--last .counter__num,
+.counter__pair--last .counter__label {
+  color: var(--kodak-red);
+}
+.counter__pair--done .counter__num,
+.counter__pair--done .counter__label {
+  color: var(--muted);
+}

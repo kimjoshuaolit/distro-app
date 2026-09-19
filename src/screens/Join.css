@@ -108,3 +108,11 @@
   filter: saturate(0.5);
   cursor: default;
 }
+
+/* Same button treatment when rendered as a react-router Link. */
+.join__submit--link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}

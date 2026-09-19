@@ -39,3 +39,15 @@ export function clearGuestSession(eventId: string): void {
     // ignore
   }
 }
+
+/** Merge remaining-count changes into the stored session; returns the updated session. */
+export function updateRemaining(
+  eventId: string,
+  patch: { photosRemaining?: number; clipsRemaining?: number },
+): GuestSession | null {
+  const current = getGuestSession(eventId)
+  if (!current) return null
+  const next: GuestSession = { ...current, ...patch }
+  saveGuestSession(next)
+  return next
+}
