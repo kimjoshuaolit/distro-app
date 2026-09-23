@@ -3,15 +3,42 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 const rpc = vi.fn()
 const invoke = vi.fn()
 
+// A chainable postgrest-style query recorder: every builder call is logged and
+// the awaited result is whatever `queryResult` holds.
+const queryCalls: Array<[string, unknown[]]> = []
+let queryResult: { data: unknown; error: unknown } = { data: [], error: null }
+const from = vi.fn((table: string) => {
+  queryCalls.push(['from', [table]])
+  const builder: Record<string, unknown> = {}
+  for (const m of ['select', 'order', 'setHeader', 'abortSignal']) {
+    builder[m] = (...args: unknown[]) => {
+      queryCalls.push([m, args])
+      return builder
+    }
+  }
+  builder.then = (resolve: (v: unknown) => unknown) => resolve(queryResult)
+  return builder
+})
+
 vi.mock('./supabase', () => ({
   supabase: {
     rpc: (...args: unknown[]) => rpc(...args),
+    from: (table: string) => from(table),
     functions: { invoke: (...args: unknown[]) => invoke(...args) },
   },
 }))
 
-const { getEventStatus, joinEvent, JoinError, issueUploadUrl, putToR2, confirmUpload, putTimeoutMs } =
-  await import('./api.ts')
+const {
+  getEventStatus,
+  joinEvent,
+  JoinError,
+  issueUploadUrl,
+  putToR2,
+  confirmUpload,
+  putTimeoutMs,
+  getServerRoll,
+  issueViewUrls,
+} = await import('./api.ts')
 
 const OPEN_ID = '00000000-0000-0000-0000-000000000001'
 
@@ -191,6 +218,57 @@ describe('putToR2', () => {
   it('scales the PUT timeout with size', () => {
     expect(putTimeoutMs(0)).toBe(30_000)
     expect(putTimeoutMs(50 * 1024 * 1024)).toBe(30_000 + 50 * 2_000)
+  })
+})
+
+describe('getServerRoll', () => {
+  beforeEach(() => {
+    queryCalls.length = 0
+    queryResult = { data: [], error: null }
+  })
+
+  it('reads shots through RLS with the device token header on that request', async () => {
+    queryResult = {
+      data: [
+        { client_shot_id: 'a', type: 'photo', upload_status: 'uploaded', captured_at: '2026-09-19T12:00:00+00:00' },
+        { client_shot_id: null, type: 'photo', upload_status: 'local', captured_at: null }, // legacy row
+      ],
+      error: null,
+    }
+    const roll = await getServerRoll('tok-123')
+
+    expect(queryCalls).toContainEqual(['from', ['shots']])
+    expect(queryCalls).toContainEqual(['setHeader', ['x-device-token', 'tok-123']])
+    expect(queryCalls.find(([m]) => m === 'abortSignal')?.[1][0]).toBeInstanceOf(AbortSignal)
+    const select = queryCalls.find(([m]) => m === 'select')?.[1][0] as string
+    expect(select).not.toMatch(/r2_key|guest_id|device_token/) // metadata only
+    expect(roll).toEqual([
+      { clientShotId: 'a', type: 'photo', uploadStatus: 'uploaded', capturedAt: '2026-09-19T12:00:00+00:00' },
+    ])
+  })
+
+  it('throws on a read error so the caller falls back to the device roll', async () => {
+    queryResult = { data: null, error: { message: 'offline' } }
+    await expect(getServerRoll('tok')).rejects.toThrow()
+  })
+})
+
+describe('issueViewUrls', () => {
+  it('asks for URLs for the given ids and returns the map', async () => {
+    invoke.mockResolvedValue({ data: { urls: { a: 'https://r2/a' }, expiresIn: 600 }, error: null })
+    await expect(issueViewUrls('tok', ['a', 'b'])).resolves.toEqual({
+      urls: { a: 'https://r2/a' },
+      expiresIn: 600,
+    })
+    const [name, opts] = invoke.mock.calls[0]
+    expect(name).toBe('issue-view-urls')
+    expect(opts.body).toEqual({ deviceToken: 'tok', clientShotIds: ['a', 'b'] })
+    expect(opts.timeout).toBeGreaterThan(0)
+  })
+
+  it('throws on a function error', async () => {
+    invoke.mockResolvedValue(typedError('guest_not_found'))
+    await expect(issueViewUrls('tok', ['a'])).rejects.toThrow()
   })
 })
 

@@ -1,0 +1,103 @@
+/* Retro look applied at playback — the stored clip is never altered (AD-8). */
+.retro {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+  max-height: 100%;
+  overflow: hidden;
+  line-height: 0;
+  background: var(--viewfinder-bg);
+}
+
+/* Warm FunSaver grade, matching the baked photo look as closely as CSS allows. */
+.retro__video,
+.retro-grade {
+  filter: sepia(0.18) saturate(1.2) contrast(1.06) brightness(1.03) hue-rotate(-6deg);
+}
+
+.retro__video {
+  display: block;
+  max-width: 100%;
+  max-height: 78vh;
+  max-height: 78dvh; /* respects iOS's dynamic toolbar */
+  cursor: pointer;
+}
+
+/* Film grain: tiled SVG turbulence, jittered so it reads as live grain. */
+.retro__grain {
+  position: absolute;
+  inset: -10%;
+  pointer-events: none;
+  opacity: 0.22;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  animation: retro-grain 0.6s steps(4) infinite;
+  animation-play-state: paused; /* idle grain costs battery */
+}
+
+.retro.is-playing .retro__grain {
+  animation-play-state: running;
+}
+
+@keyframes retro-grain {
+  0% { transform: translate(0, 0); }
+  25% { transform: translate(-3%, 2%); }
+  50% { transform: translate(2%, -3%); }
+  75% { transform: translate(-2%, -1%); }
+  100% { transform: translate(0, 0); }
+}
+
+.retro__vignette {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse at center, transparent 55%, rgba(26, 18, 12, 0.55) 100%);
+}
+
+/* Orange 7-segment date stamp, bottom-right like a disposable's. */
+.retro__stamp {
+  position: absolute;
+  right: 5%;
+  bottom: 5%;
+  pointer-events: none;
+  font-family: var(--font-stamp);
+  font-size: clamp(0.9rem, 3.2vw, 1.25rem);
+  line-height: 1;
+  letter-spacing: 0.08em;
+  color: var(--stamp-orange);
+  text-shadow: 0 0 6px rgba(255, 138, 30, 0.85);
+}
+
+.retro__play {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 64px;
+  height: 64px;
+  border-radius: var(--radius-pill);
+  border: 2px solid var(--gold);
+  background: rgba(26, 18, 12, 0.55);
+  color: var(--gold);
+  font-size: 1.4rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+/* Get out of the way while playing; tapping the video still pauses. */
+.retro__play.is-playing {
+  opacity: 0;
+}
+
+.retro__play:focus-visible {
+  opacity: 1;
+  outline: 3px solid var(--cream);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .retro__grain {
+    animation: none;
+  }
+}

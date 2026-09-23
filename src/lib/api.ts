@@ -171,6 +171,67 @@ export async function putToR2(uploadUrl: string, blob: Blob): Promise<void> {
   }
 }
 
+/** A guest's shot as the server knows it (metadata only — no media). */
+export type ServerShot = {
+  clientShotId: string
+  type: 'photo' | 'clip'
+  uploadStatus: 'local' | 'uploaded'
+  capturedAt: string | null
+}
+
+type ServerShotRow = {
+  client_shot_id: string | null
+  type: 'photo' | 'clip'
+  upload_status: 'local' | 'uploaded'
+  captured_at: string | null
+}
+
+/**
+ * The guest's own roll from the server, read through RLS (FR12): the device
+ * token rides in the `x-device-token` header on this request only, and the
+ * `shots` policy returns just that guest's rows. Throws on any failure — the
+ * caller falls back to the on-device roll.
+ */
+export async function getServerRoll(deviceToken: string): Promise<ServerShot[]> {
+  const { data, error } = await supabase
+    .from('shots')
+    .select('client_shot_id, type, upload_status, captured_at')
+    .order('captured_at', { ascending: true })
+    .setHeader('x-device-token', deviceToken)
+    .abortSignal(AbortSignal.timeout(FUNCTION_TIMEOUT_MS))
+  if (error) throw new Error('Could not load your roll.')
+  return ((data ?? []) as ServerShotRow[])
+    .filter((r): r is ServerShotRow & { client_shot_id: string } => !!r.client_shot_id)
+    .map((r) => ({
+      clientShotId: r.client_shot_id,
+      type: r.type,
+      uploadStatus: r.upload_status,
+      capturedAt: r.captured_at,
+    }))
+}
+
+export type ViewUrls = { urls: Record<string, string>; expiresIn: number }
+
+/**
+ * Short-lived signed view URLs for the guest's own uploaded shots (AD-2).
+ * Ids the server won't vouch for are simply absent from `urls`; `expiresIn`
+ * (seconds) tells the caller when to ask again.
+ */
+export async function issueViewUrls(deviceToken: string, clientShotIds: string[]): Promise<ViewUrls> {
+  const { data, error } = await supabase.functions.invoke('issue-view-urls', {
+    body: { deviceToken, clientShotIds },
+    timeout: FUNCTION_TIMEOUT_MS,
+  })
+  if (error) {
+    const { message } = await parseFunctionError(error)
+    throw new Error(message)
+  }
+  return {
+    urls: (data?.urls ?? {}) as Record<string, string>,
+    expiresIn: typeof data?.expiresIn === 'number' ? data.expiresIn : 0,
+  }
+}
+
 /** Mark the shot uploaded server-side after a successful PUT. Idempotent. */
 export async function confirmUpload(deviceToken: string, clientShotId: string): Promise<void> {
   const { error } = await supabase.functions.invoke('confirm-upload', {

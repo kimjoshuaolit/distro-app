@@ -2,6 +2,11 @@ import { Routes, Route } from 'react-router-dom'
 import Placeholder from './screens/Placeholder.tsx'
 import Join from './screens/Join.tsx'
 import Camera from './screens/Camera.tsx'
+import Roll from './screens/Roll.tsx'
+
+// My Roll is bundled eagerly on purpose: it must open offline (there's no
+// service worker to precache a lazy chunk), and a failed chunk fetch would
+// blank the whole app. It only adds a few KB.
 
 export default function App() {
   return (
@@ -9,6 +14,7 @@ export default function App() {
       <Route path="/" element={<Placeholder />} />
       <Route path="/j/:eventToken" element={<Join />} />
       <Route path="/c/:eventToken" element={<Camera />} />
+      <Route path="/r/:eventToken" element={<Roll />} />
       {/* Catch-all: unknown deep links fall back to the shell instead of a blank page. */}
       <Route path="*" element={<Placeholder />} />
     </Routes>

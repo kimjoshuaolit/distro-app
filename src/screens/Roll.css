@@ -1,0 +1,215 @@
+/* My Roll — a contact sheet: dark film frames laid out on cream photo paper. */
+.roll {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: var(--cream);
+  color: var(--ink);
+}
+
+.roll__page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-4) var(--space-12);
+}
+
+.roll__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.roll__title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-display);
+  font-weight: 400;
+  line-height: 1;
+  text-transform: uppercase;
+  color: var(--kodak-red);
+}
+
+.roll__meta {
+  margin: var(--space-1) 0 0;
+  font-size: var(--text-body);
+  color: var(--ink);
+}
+
+.roll__back,
+.roll__cta {
+  min-height: 44px;
+  padding: 0 var(--space-4);
+  border: none;
+  border-radius: var(--radius-pill);
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: var(--text-body);
+  cursor: pointer;
+}
+
+.roll__back {
+  background: var(--ink);
+  color: var(--gold);
+}
+
+.roll__cta {
+  align-self: center;
+  background: var(--kodak-red);
+  color: var(--on-dark);
+}
+
+.roll__back:focus-visible,
+.roll__cta:focus-visible,
+.frame:focus-visible {
+  outline: 3px solid var(--kodak-red);
+  outline-offset: 2px;
+}
+
+.roll__note {
+  margin: var(--space-6) 0;
+  text-align: center;
+  color: var(--muted);
+}
+
+.roll__upload {
+  display: flex;
+}
+
+.roll__empty {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-top: var(--space-8);
+  padding: var(--space-8) var(--space-6);
+  border: 2px dashed var(--hairline);
+  border-radius: var(--radius-lg);
+  text-align: center;
+}
+
+.roll__empty-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-h1);
+  text-transform: uppercase;
+}
+
+.roll__empty-body {
+  margin: 0;
+  line-height: 1.5;
+  color: var(--ink);
+}
+
+/* The sheet: a dark negative strip with sprocket holes down both edges. */
+.roll__sheet {
+  list-style: none;
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-2);
+  padding: var(--space-4) var(--space-4);
+  border-radius: var(--radius-sm);
+  background-color: var(--ink);
+  background-image:
+    radial-gradient(circle, var(--cream) 3px, transparent 3.5px),
+    radial-gradient(circle, var(--cream) 3px, transparent 3.5px);
+  background-size: 12px 18px;
+  background-position: 0 4px, right 0 top 4px;
+  background-repeat: repeat-y;
+}
+
+.frame {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  width: 100%;
+  min-height: 44px;
+  padding: 0;
+  border: none;
+  background: none;
+  text-align: left;
+  color: inherit;
+  cursor: pointer;
+}
+
+.frame--empty {
+  cursor: default;
+}
+
+.frame__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.frame__no {
+  font-family: var(--font-stamp);
+  font-size: var(--text-small);
+  color: var(--stamp-orange);
+}
+
+.frame__badge {
+  min-width: 0;
+  text-align: right;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--on-dark);
+}
+
+.frame__badge--saved {
+  color: var(--gold);
+}
+
+.frame__badge--saving {
+  color: var(--cream);
+}
+
+.frame__badge--not_saved,
+.frame__badge--unavailable {
+  color: var(--stamp-orange);
+}
+
+.frame__media {
+  position: relative;
+  display: block;
+  aspect-ratio: 3 / 4;
+  overflow: hidden;
+  border-radius: 2px;
+  background: var(--viewfinder-bg);
+}
+
+.frame__media img,
+.frame__media video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.frame__media--empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  font-size: var(--text-h1);
+}
+
+.frame__play {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--gold);
+  font-size: 1.6rem;
+  text-shadow: 0 0 8px rgba(26, 18, 12, 0.9);
+}
+
+.frame--empty .frame__media {
+  opacity: 0.55;
+}

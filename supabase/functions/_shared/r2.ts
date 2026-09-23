@@ -1,6 +1,7 @@
 // R2 (S3-compatible) access for Edge Functions only — creds never leave here.
 // Deno-only (npm: import); not imported by the client's vitest suite.
 import { AwsClient } from 'npm:aws4fetch@1'
+import { withExpiry } from './view-rules.ts'
 
 export const PUT_TTL_SECONDS = 300 // signed upload URLs live 5 minutes
 
@@ -29,12 +30,22 @@ function objectUrl(endpoint: string, key: string): string {
  * byte size — the size cap can't be bypassed by uploading a bigger body.
  */
 export async function presignPut(key: string, contentType: string, size: number): Promise<string> {
-  const url = `${objectUrl(env('R2_ENDPOINT'), key)}?X-Amz-Expires=${PUT_TTL_SECONDS}`
+  const url = withExpiry(objectUrl(env('R2_ENDPOINT'), key), PUT_TTL_SECONDS)
   const signed = await client().sign(url, {
     method: 'PUT',
     headers: { 'content-type': contentType, 'content-length': String(size) },
     aws: { signQuery: true, allHeaders: true },
   })
+  return signed.url
+}
+
+/**
+ * Presign a short-lived GET for viewing one object (AD-2: never a public URL).
+ * Callers must have already checked the caller owns the object.
+ */
+export async function presignGet(key: string, ttlSeconds: number): Promise<string> {
+  const url = withExpiry(objectUrl(env('R2_ENDPOINT'), key), ttlSeconds)
+  const signed = await client().sign(url, { method: 'GET', aws: { signQuery: true } })
   return signed.url
 }
 

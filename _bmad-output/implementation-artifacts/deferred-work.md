@@ -53,3 +53,11 @@ Surfaced during builds; revisit deliberately. Append-only.
 - source_spec: `spec-1-5-offline-safe-upload.md`
   summary: Provision production Cloudflare R2 at deploy — bucket, the PUT CORS rule for the Pages origin, and `R2_*` Function secrets — and smoke-test one real upload.
   evidence: The pipeline is verified end-to-end only against the local Supabase S3-compatible endpoint; the required bucket CORS policy is documented in `supabase/functions/.env.example` but can't be applied until the Cloudflare account/Pages domain exist. Without it every browser PUT fails (and retries forever).
+
+- source_spec: `spec-1-6-view-own-roll.md`
+  summary: Bring the initial JS bundle back under Vite's 500 kB warning (now ~510 kB / 148 kB gzip) — e.g. a separate vendor chunk for supabase-js, or code-splitting only once a service worker can precache route chunks.
+  evidence: It was already ~499.5 kB before Story 1.6 (supabase-js + react-dom dominate). Lazy-loading My Roll was tried and reverted in review: with no service worker, a lazy chunk can't load offline and a failed chunk fetch blanked the app — worse on venue wifi than 10 kB of extra JS.
+
+- source_spec: `spec-1-6-view-own-roll.md`
+  summary: Consider a subtle "showing shots on this phone" hint when the server roll can't be reached.
+  evidence: By approved intent My Roll degrades silently to device-only when offline (matrix row 2), which review flagged as possibly confusing because cloud-only shots vanish without explanation. A product call, not a defect.

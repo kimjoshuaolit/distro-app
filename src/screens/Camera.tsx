@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Navigate, useParams } from 'react-router-dom'
+import { Navigate, useNavigate, useParams } from 'react-router-dom'
 import { useCamera } from '../capture/useCamera.ts'
 import { capturePhoto } from '../capture/capturePhoto.ts'
 import { useClipRecorder } from '../capture/useClipRecorder.ts'
@@ -42,6 +42,7 @@ function playTick() {
 
 export default function Camera() {
   const { eventToken = '' } = useParams()
+  const navigate = useNavigate()
   const session = getGuestSession(eventToken)
 
   const camera = useCamera()
@@ -278,7 +279,15 @@ export default function Camera() {
                   onToggle={handleRecordToggle}
                 />
               )}
-              <span className="camera__spacer" aria-hidden="true" />
+              <button
+                type="button"
+                className="camera__flip"
+                onClick={() => navigate(`/r/${eventToken}`)}
+                aria-label="My roll"
+                disabled={recorder.recording}
+              >
+                🎞️
+              </button>
             </div>
           </div>
         </div>
