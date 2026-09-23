@@ -383,6 +383,9 @@ deno_version = 2
 
 # [edge_runtime.secrets]
 # secret_key = "env(SECRET_VALUE)"
+# Upload functions (issue-upload-url / confirm-upload) read R2_* secrets from
+# supabase/functions/.env locally (see supabase/functions/.env.example); serve
+# with `npx supabase functions serve --env-file supabase/functions/.env`.
 
 [analytics]
 enabled = true

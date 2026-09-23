@@ -1,5 +1,6 @@
 import { supabase } from './supabase'
 import type { GuestSession } from './guestSession'
+import type { Shot } from '../capture/db'
 
 export type EventStatus =
   | { state: 'open' }
@@ -77,5 +78,107 @@ export async function joinEvent(eventId: string, firstName: string): Promise<Joi
     firstName: data.firstName,
     photosRemaining: data.photosRemaining,
     clipsRemaining: data.clipsRemaining,
+  }
+}
+
+// Upload-path function calls time out so a stalled request on weak wifi can't
+// wedge the background queue; a timeout surfaces as a transient 'server_error'.
+const FUNCTION_TIMEOUT_MS = 20_000
+
+export class UploadError extends Error {
+  code: string
+  constructor(code: string, message: string) {
+    super(message)
+    this.name = 'UploadError'
+    this.code = code
+  }
+}
+
+/** Pull the typed `{ error: { code, message } }` out of a functions.invoke error. */
+async function parseFunctionError(
+  error: unknown,
+  fallbackCode = 'server_error',
+): Promise<{ code: string; message: string }> {
+  let code = fallbackCode
+  let message = 'Something went wrong. Please try again.'
+  const ctx = (error as { context?: Response }).context
+  if (ctx && typeof ctx.json === 'function') {
+    try {
+      const body = (await ctx.json()) as { error?: { code?: string; message?: string } }
+      if (body?.error?.code) {
+        code = body.error.code
+        message = body.error.message ?? message
+      }
+    } catch {
+      // keep defaults
+    }
+  }
+  return { code, message }
+}
+
+export type IssuedUpload = {
+  uploadUrl: string
+  r2Key: string
+  shotId: string
+  expiresIn: number
+}
+
+/**
+ * Reserve a shot server-side (cap enforced, AD-4) and get a short-lived signed
+ * R2 PUT URL. Throws `UploadError('cap_reached')` when the allotment is spent.
+ */
+export async function issueUploadUrl(deviceToken: string, shot: Shot): Promise<IssuedUpload> {
+  const { data, error } = await supabase.functions.invoke('issue-upload-url', {
+    body: {
+      deviceToken,
+      clientShotId: shot.id,
+      type: shot.type,
+      contentType: shot.blob.type,
+      size: shot.blob.size,
+      capturedAt: shot.capturedAt,
+    },
+    timeout: FUNCTION_TIMEOUT_MS,
+  })
+  if (error) {
+    const { code, message } = await parseFunctionError(error)
+    throw new UploadError(code, message)
+  }
+  if (!data?.uploadUrl) throw new UploadError('server_error', 'Empty response from the server.')
+  return data as IssuedUpload
+}
+
+/** Time budget for a PUT: generous base plus ~2s per MB for slow venue wifi. */
+export function putTimeoutMs(bytes: number): number {
+  return 30_000 + Math.ceil(bytes / (1024 * 1024)) * 2_000
+}
+
+/**
+ * PUT the blob straight to R2 via the signed URL (never through the function).
+ * The URL signs Content-Type and Content-Length; the browser sets the length
+ * from the Blob. A hung PUT aborts so the queue can't stall forever.
+ */
+export async function putToR2(uploadUrl: string, blob: Blob): Promise<void> {
+  const res = await fetch(uploadUrl, {
+    method: 'PUT',
+    headers: { 'Content-Type': blob.type },
+    body: blob,
+    signal: AbortSignal.timeout(putTimeoutMs(blob.size)),
+  })
+  if (!res.ok) {
+    // 5xx/429/408 are transient; other 4xx (expired/mismatched signature) are not.
+    const transient = res.status >= 500 || res.status === 429 || res.status === 408
+    throw new UploadError(transient ? 'server_error' : 'put_failed', `Storage rejected the upload (${res.status}).`)
+  }
+}
+
+/** Mark the shot uploaded server-side after a successful PUT. Idempotent. */
+export async function confirmUpload(deviceToken: string, clientShotId: string): Promise<void> {
+  const { error } = await supabase.functions.invoke('confirm-upload', {
+    body: { deviceToken, clientShotId },
+    timeout: FUNCTION_TIMEOUT_MS,
+  })
+  if (error) {
+    const { code, message } = await parseFunctionError(error)
+    throw new UploadError(code, message)
   }
 }

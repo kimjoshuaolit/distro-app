@@ -2,7 +2,10 @@
 // before any network. Raw IndexedDB — one object store, keyed by shot id.
 
 export type ShotType = 'photo' | 'clip'
-export type UploadStatus = 'local' | 'uploaded'
+// 'rejected' is client-only: the server refused to reserve it (cap reached), so
+// no server row exists and the queue must stop retrying it. Server rows are only
+// ever 'local' | 'uploaded'.
+export type UploadStatus = 'local' | 'uploaded' | 'rejected'
 
 export type Shot = {
   id: string
@@ -70,4 +73,51 @@ export async function getShotsByEvent(eventId: string): Promise<Shot[]> {
 export async function countByType(eventId: string, type: ShotType): Promise<number> {
   const shots = await getShotsByEvent(eventId)
   return shots.filter((s) => s.type === type).length
+}
+
+/** How many of this event's shots the server refused (cap reached). */
+export async function countRejected(eventId: string): Promise<number> {
+  const shots = await getShotsByEvent(eventId)
+  return shots.filter((s) => s.uploadStatus === 'rejected').length
+}
+
+/** Shots for an event still awaiting upload (oldest first, so rolls drain in order). */
+export async function getPendingUploads(eventId: string): Promise<Shot[]> {
+  const shots = await getShotsByEvent(eventId)
+  return shots
+    .filter((s) => s.uploadStatus === 'local')
+    .sort((a, b) => a.capturedAt.localeCompare(b.capturedAt))
+}
+
+async function setUploadStatus(id: string, status: UploadStatus): Promise<void> {
+  const db = await openDb()
+  try {
+    await new Promise<void>((resolve, reject) => {
+      const tx = db.transaction(STORE, 'readwrite')
+      const store = tx.objectStore(STORE)
+      const get = store.get(id)
+      get.onsuccess = () => {
+        const shot = get.result as Shot | undefined
+        if (shot) {
+          shot.uploadStatus = status
+          store.put(shot)
+        }
+      }
+      tx.oncomplete = () => resolve()
+      tx.onerror = () => reject(tx.error)
+      tx.onabort = () => reject(tx.error)
+    })
+  } finally {
+    db.close()
+  }
+}
+
+/** Flip a stored shot to 'uploaded' once the server has confirmed it. */
+export function markUploaded(id: string): Promise<void> {
+  return setUploadStatus(id, 'uploaded')
+}
+
+/** Mark a shot the server refused to reserve (cap reached) so we stop retrying it. */
+export function markRejected(id: string): Promise<void> {
+  return setUploadStatus(id, 'rejected')
 }

@@ -1,6 +1,16 @@
 import 'fake-indexeddb/auto'
 import { describe, it, expect, beforeEach } from 'vitest'
-import { putShot, getShotsByEvent, countByType, type Shot, type ShotType } from './db.ts'
+import {
+  putShot,
+  getShotsByEvent,
+  countByType,
+  getPendingUploads,
+  markUploaded,
+  markRejected,
+  countRejected,
+  type Shot,
+  type ShotType,
+} from './db.ts'
 
 function shot(id: string, eventId: string, type: ShotType): Shot {
   return {
@@ -50,5 +60,50 @@ describe('shots IndexedDB', () => {
     const [stored] = await getShotsByEvent('E1')
     expect(stored.blob).toBeInstanceOf(Blob)
     expect(await stored.blob.text()).toBe('a')
+  })
+})
+
+describe('upload queue helpers', () => {
+  const at = (s: Shot, iso: string, status: Shot['uploadStatus'] = 'local'): Shot => ({
+    ...s,
+    capturedAt: iso,
+    uploadStatus: status,
+  })
+
+  it('returns only local shots for the event, oldest first', async () => {
+    await putShot(at(shot('late', 'E1', 'photo'), '2026-09-19T12:05:00.000Z'))
+    await putShot(at(shot('early', 'E1', 'clip'), '2026-09-19T12:01:00.000Z'))
+    await putShot(at(shot('done', 'E1', 'photo'), '2026-09-19T12:00:00.000Z', 'uploaded'))
+    await putShot(at(shot('refused', 'E1', 'photo'), '2026-09-19T12:00:30.000Z', 'rejected'))
+    await putShot(at(shot('other', 'E2', 'photo'), '2026-09-19T12:00:00.000Z'))
+
+    const pending = await getPendingUploads('E1')
+    expect(pending.map((s) => s.id)).toEqual(['early', 'late'])
+  })
+
+  it('markUploaded persists and removes the shot from the pending set', async () => {
+    await putShot(shot('a', 'E1', 'photo'))
+    await putShot(shot('b', 'E1', 'photo'))
+
+    await markUploaded('a')
+
+    expect((await getPendingUploads('E1')).map((s) => s.id)).toEqual(['b'])
+    const stored = (await getShotsByEvent('E1')).find((s) => s.id === 'a')
+    expect(stored?.uploadStatus).toBe('uploaded')
+    expect(await stored?.blob.text()).toBe('a') // blob kept for the own-roll view
+  })
+
+  it('markRejected persists, leaves pending, and is counted', async () => {
+    await putShot(shot('a', 'E1', 'photo'))
+
+    await markRejected('a')
+
+    expect(await getPendingUploads('E1')).toHaveLength(0)
+    expect(await countRejected('E1')).toBe(1)
+    expect(await countRejected('E2')).toBe(0)
+  })
+
+  it('marking an unknown id is a harmless no-op', async () => {
+    await expect(markUploaded('missing')).resolves.toBeUndefined()
   })
 })

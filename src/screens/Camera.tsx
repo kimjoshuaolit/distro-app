@@ -4,11 +4,13 @@ import { useCamera } from '../capture/useCamera.ts'
 import { capturePhoto } from '../capture/capturePhoto.ts'
 import { useClipRecorder } from '../capture/useClipRecorder.ts'
 import { saveClip } from '../capture/captureClip.ts'
+import { useUploader } from '../capture/useUploader.ts'
 import { getGuestSession, updateRemaining } from '../lib/guestSession.ts'
 import Counter from '../ui/Counter.tsx'
 import Shutter from '../ui/Shutter.tsx'
 import RecordButton from '../ui/RecordButton.tsx'
 import ModeToggle, { type CaptureMode } from '../ui/ModeToggle.tsx'
+import UploadIndicator from '../ui/UploadIndicator.tsx'
 import './Camera.css'
 
 function formatElapsed(ms: number): string {
@@ -49,6 +51,7 @@ export default function Camera() {
   const clipsRef = useRef(session?.clipsRemaining ?? 0)
   const flashTimer = useRef<number | null>(null)
   const recorder = useClipRecorder(camera.stream)
+  const uploader = useUploader(eventToken, session?.deviceToken ?? null)
   const [photos, setPhotos] = useState(session?.photosRemaining ?? 0)
   const [clips, setClips] = useState(session?.clipsRemaining ?? 0)
   const [mode, setMode] = useState<CaptureMode>('photo')
@@ -98,6 +101,7 @@ export default function Camera() {
       photosRef.current = next
       setPhotos(next)
       updateRemaining(eventToken, { photosRemaining: next })
+      uploader.bump()
       playTick()
       setFlash(true)
       if (flashTimer.current) window.clearTimeout(flashTimer.current)
@@ -126,6 +130,7 @@ export default function Camera() {
     clipsRef.current = next
     setClips(next)
     updateRemaining(eventToken, { clipsRemaining: next })
+    uploader.bump()
     playTick()
     setFlash(true)
     if (flashTimer.current) window.clearTimeout(flashTimer.current)
@@ -240,6 +245,13 @@ export default function Camera() {
           )}
 
           <div className="camera__controls">
+            <div className="camera__upload">
+              <UploadIndicator
+                state={uploader.state}
+                pending={uploader.pendingCount}
+                rejected={uploader.rejectedCount}
+              />
+            </div>
             <div className="camera__modewrap">
               <ModeToggle mode={mode} onChange={setMode} disabled={recorder.recording} />
             </div>

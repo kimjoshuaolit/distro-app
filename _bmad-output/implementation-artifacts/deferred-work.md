@@ -41,3 +41,15 @@ Surfaced during builds; revisit deliberately. Append-only.
 - source_spec: `spec-1-4-record-video-clips.md`
   summary: Add an explicit `Shot.mimeType` field rather than relying on `blob.type` alone, to make the Story 1.6 playback/download path robust if a blob's type is ever dropped in transit.
   evidence: `saveClip` persists the recorder blob with its `type`, but `db.ts` `Shot` has no dedicated mime field; adequate today, worth hardening for the viewer/upload.
+
+- source_spec: `spec-1-5-offline-safe-upload.md`
+  summary: Reconcile the on-screen photo/clip counter with the server's authoritative remaining counts, pending-aware (client remaining = server remaining − local shots not yet reserved).
+  evidence: `reserve_shot` returns `photos_remaining`/`clips_remaining` but `issue-upload-url` drops them and the client never resyncs `guestSession`; a cleared/reinstalled device or counter drift can show more shots than the server will accept (those become 'rejected'). Naively copying the server count would over-report while shots are still queued.
+
+- source_spec: `spec-1-5-offline-safe-upload.md`
+  summary: Decide the post-event upload policy (e.g. accept uploads for N days after `window_close`, and/or reject reservations whose `captured_at` is after close).
+  evidence: `reserve_shot` intentionally does not check the event window — gating uploads on it would drop legitimate shots captured just before close that upload late on bad wifi (AD-1). The per-guest 25/5 cap bounds abuse, but a stale device token can still reserve its remaining allotment after the event ends.
+
+- source_spec: `spec-1-5-offline-safe-upload.md`
+  summary: Provision production Cloudflare R2 at deploy — bucket, the PUT CORS rule for the Pages origin, and `R2_*` Function secrets — and smoke-test one real upload.
+  evidence: The pipeline is verified end-to-end only against the local Supabase S3-compatible endpoint; the required bucket CORS policy is documented in `supabase/functions/.env.example` but can't be applied until the Cloudflare account/Pages domain exist. Without it every browser PUT fails (and retries forever).
