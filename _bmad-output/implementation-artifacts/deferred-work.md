@@ -61,3 +61,11 @@ Surfaced during builds; revisit deliberately. Append-only.
 - source_spec: `spec-1-6-view-own-roll.md`
   summary: Consider a subtle "showing shots on this phone" hint when the server roll can't be reached.
   evidence: By approved intent My Roll degrades silently to device-only when offline (matrix row 2), which review flagged as possibly confusing because cloud-only shots vanish without explanation. A product call, not a defect.
+
+- source_spec: `spec-2-1-couple-secure-login.md`
+  summary: Provision couple auth on the hosted Supabase project at deploy — enable the `before_user_created` hook, set Site URL + redirect allow-list for the Pages origin (`/reveal/*`), upload the magic-link and confirmation templates, keep email confirmations ON, and configure a custom SMTP sender — then smoke-test one real couple sign-in.
+  evidence: All of these live in `supabase/config.toml`, which only applies to the local stack; on the hosted project they're dashboard settings. Without the hook, the migration's "real gate" doesn't exist, and Supabase's built-in email is heavily rate-limited and may only deliver to team addresses.
+
+- source_spec: `spec-2-1-couple-secure-login.md`
+  summary: Decide whether the couple's read access should wait for the reveal (e.g. only after `window_close` or an operator "delivered" flag), so the couple can't peek at guests' shots through the API during the wedding.
+  evidence: Story 2.1's couple policies grant their event's rows as soon as they sign in; the product frames delivery as "days later, the wait is part of the ritual", but no story defines a delivery gate. A product call, not a defect.

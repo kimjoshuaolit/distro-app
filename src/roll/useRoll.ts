@@ -23,9 +23,15 @@ const BROKEN_RETRY_MS = 15_000
  * then swaps in the merged device + server roll. Reloads when `refreshKey`
  * changes (the uploader's pending count), when connectivity or the app comes
  * back, and shortly before signed view URLs expire. Object URLs are reused per
- * shot, so refreshes never restart a playing clip.
+ * shot, so refreshes never restart a playing clip. The server read is pinned to
+ * `guestId`, so a couple session in the same browser can't widen it (2.1).
  */
-export function useRoll(eventId: string, deviceToken: string | null, refreshKey: unknown) {
+export function useRoll(
+  eventId: string,
+  deviceToken: string | null,
+  guestId: string | null,
+  refreshKey: unknown,
+) {
   const [state, setState] = useState<RollState>({ status: 'loading', items: [] })
   const [tick, setTick] = useState(0)
   const media = useRef<ReturnType<typeof createMediaCache> | null>(null)
@@ -85,10 +91,10 @@ export function useRoll(eventId: string, deviceToken: string | null, refreshKey:
       {
         readLocal: () => getShotsByEvent(eventId),
         build:
-          deviceToken && viewCache
+          deviceToken && guestId && viewCache
             ? (local) =>
                 buildRoll(local, {
-                  getServerRoll: () => getServerRoll(deviceToken),
+                  getServerRoll: () => getServerRoll(deviceToken, guestId),
                   issueViewUrls: (ids) => viewCache.get(ids),
                 })
             : undefined,
@@ -108,7 +114,7 @@ export function useRoll(eventId: string, deviceToken: string | null, refreshKey:
       cancelled = true
       if (expiryTimer !== undefined) window.clearTimeout(expiryTimer)
     }
-  }, [eventId, deviceToken, refreshKey, tick])
+  }, [eventId, deviceToken, guestId, refreshKey, tick])
 
   /** A tile or the viewer failed to load a shot's media: re-fetch its link. */
   const reportBroken = useCallback((id: string) => {

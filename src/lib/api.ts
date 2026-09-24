@@ -189,13 +189,16 @@ type ServerShotRow = {
 /**
  * The guest's own roll from the server, read through RLS (FR12): the device
  * token rides in the `x-device-token` header on this request only, and the
- * `shots` policy returns just that guest's rows. Throws on any failure — the
- * caller falls back to the on-device roll.
+ * `shots` policy returns just that guest's rows. The explicit `guest_id` filter
+ * matters when a couple is signed in on the same browser (2.1): their session
+ * can see the whole event, but My Roll must still show only this guest's
+ * shots. Throws on any failure — the caller falls back to the on-device roll.
  */
-export async function getServerRoll(deviceToken: string): Promise<ServerShot[]> {
+export async function getServerRoll(deviceToken: string, guestId: string): Promise<ServerShot[]> {
   const { data, error } = await supabase
     .from('shots')
     .select('client_shot_id, type, upload_status, captured_at')
+    .eq('guest_id', guestId)
     .order('captured_at', { ascending: true })
     .setHeader('x-device-token', deviceToken)
     .abortSignal(AbortSignal.timeout(FUNCTION_TIMEOUT_MS))

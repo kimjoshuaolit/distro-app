@@ -10,4 +10,9 @@ if (!url || !anonKey) {
   )
 }
 
-export const supabase = createClient(url ?? '', anonKey ?? '')
+// Couple magic links use the implicit flow on purpose (2.1): couples often ask
+// for the link on a laptop and tap it on a phone, and PKCE would need the
+// requesting browser's code verifier. The session arrives in the URL hash.
+export const supabase = createClient(url ?? '', anonKey ?? '', {
+  auth: { flowType: 'implicit', detectSessionInUrl: true },
+})

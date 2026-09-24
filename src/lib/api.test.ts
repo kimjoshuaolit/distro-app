@@ -10,7 +10,7 @@ let queryResult: { data: unknown; error: unknown } = { data: [], error: null }
 const from = vi.fn((table: string) => {
   queryCalls.push(['from', [table]])
   const builder: Record<string, unknown> = {}
-  for (const m of ['select', 'order', 'setHeader', 'abortSignal']) {
+  for (const m of ['select', 'eq', 'order', 'setHeader', 'abortSignal']) {
     builder[m] = (...args: unknown[]) => {
       queryCalls.push([m, args])
       return builder
@@ -235,10 +235,12 @@ describe('getServerRoll', () => {
       ],
       error: null,
     }
-    const roll = await getServerRoll('tok-123')
+    const roll = await getServerRoll('tok-123', 'guest-1')
 
     expect(queryCalls).toContainEqual(['from', ['shots']])
     expect(queryCalls).toContainEqual(['setHeader', ['x-device-token', 'tok-123']])
+    // Pinned to this guest even if a couple session could see the whole event.
+    expect(queryCalls).toContainEqual(['eq', ['guest_id', 'guest-1']])
     expect(queryCalls.find(([m]) => m === 'abortSignal')?.[1][0]).toBeInstanceOf(AbortSignal)
     const select = queryCalls.find(([m]) => m === 'select')?.[1][0] as string
     expect(select).not.toMatch(/r2_key|guest_id|device_token/) // metadata only
@@ -249,7 +251,7 @@ describe('getServerRoll', () => {
 
   it('throws on a read error so the caller falls back to the device roll', async () => {
     queryResult = { data: null, error: { message: 'offline' } }
-    await expect(getServerRoll('tok')).rejects.toThrow()
+    await expect(getServerRoll('tok', 'guest-1')).rejects.toThrow()
   })
 })
 

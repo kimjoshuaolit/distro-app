@@ -1,0 +1,207 @@
+/* C1 Reveal — the softened warm skin: deep brown stage, cream + gold lead,
+   amber for the small kicker, no loud camera red. Intimate and quiet. */
+.reveal {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: var(--space-12) var(--space-4);
+  background: var(--reveal-bg);
+  color: var(--reveal-surface);
+}
+
+.reveal__stage {
+  width: 100%;
+  max-width: 520px;
+  display: flex;
+  flex-direction: column;
+}
+
+.reveal__kicker {
+  margin: 0 0 var(--space-3);
+  font-family: var(--font-body);
+  /* Bold at ≥18.66px counts as large text, so amber on brown clears 3:1. */
+  font-size: 1.2rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--amber);
+}
+
+.reveal__title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-display);
+  font-weight: 400;
+  line-height: 1.05;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+  color: var(--reveal-surface);
+}
+
+.reveal__body {
+  margin: var(--space-4) 0 0;
+  font-size: var(--text-body);
+  line-height: 1.6;
+  color: var(--reveal-surface);
+}
+
+.reveal__body strong {
+  color: var(--reveal-accent);
+  overflow-wrap: anywhere;
+}
+
+.reveal__hint {
+  margin: var(--space-3) 0 0;
+  font-size: var(--text-body);
+  line-height: 1.5;
+  color: var(--hairline);
+}
+
+.reveal__status {
+  margin: 0;
+  text-align: center;
+  font-size: var(--text-body);
+  color: var(--hairline);
+}
+
+.reveal__form {
+  display: flex;
+  flex-direction: column;
+}
+
+.reveal__label {
+  margin: var(--space-6) 0 var(--space-2);
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: var(--text-body);
+  color: var(--reveal-surface);
+}
+
+.reveal__input {
+  width: 100%;
+  min-height: 48px;
+  padding: var(--space-3) var(--space-4);
+  /* 16px min prevents iOS zoom-on-focus and honors the a11y floor. */
+  font-size: var(--text-body);
+  font-family: var(--font-body);
+  color: var(--ink);
+  background: var(--reveal-surface);
+  border: 2px solid var(--reveal-surface);
+  border-radius: var(--radius-md);
+}
+
+.reveal__input[aria-invalid='true'] {
+  border-color: var(--reveal-accent);
+}
+
+.reveal__field-error {
+  margin: var(--space-2) 0 0;
+  font-size: var(--text-body);
+  font-weight: 600;
+  color: var(--reveal-accent);
+}
+
+/* Gentle, never alarming: a quiet note with a gold rule. */
+.reveal__notice {
+  margin: var(--space-4) 0 0;
+  padding: var(--space-3) var(--space-4);
+  border-left: 3px solid var(--reveal-accent);
+  border-radius: var(--radius-sm);
+  background: rgba(251, 243, 222, 0.08);
+  font-size: var(--text-body);
+  line-height: 1.5;
+  color: var(--reveal-surface);
+}
+
+.reveal__primary,
+.reveal__secondary {
+  min-height: 44px;
+  padding: 0 var(--space-6);
+  border-radius: var(--radius-pill);
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: var(--text-body);
+  cursor: pointer;
+}
+
+.reveal__primary {
+  margin-top: var(--space-6);
+  min-height: 52px;
+  border: none;
+  background: var(--reveal-accent);
+  color: var(--reveal-bg);
+}
+
+.reveal__secondary {
+  border: 2px solid var(--hairline);
+  background: transparent;
+  color: var(--reveal-surface);
+}
+
+.reveal__primary:hover:not(:disabled),
+.reveal__secondary:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
+.reveal__primary:disabled,
+.reveal__secondary:disabled {
+  opacity: 0.7;
+  cursor: default;
+}
+
+.reveal__input:focus-visible,
+.reveal__primary:focus-visible,
+.reveal__secondary:focus-visible {
+  outline: 3px solid var(--reveal-accent);
+  outline-offset: 3px;
+}
+
+/* Beside another action, the primary button drops its stacked-form spacing. */
+.reveal__primary--inline {
+  margin-top: 0;
+}
+
+/* Present for screen readers, invisible on screen. */
+.reveal__sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.reveal__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-top: var(--space-6);
+}
+
+/* The granted shell: a letterboxed "stage" waiting for its montage (2.3). */
+.reveal__prepared {
+  margin-top: var(--space-6);
+  padding: var(--space-8) var(--space-6);
+  border-block: 12px solid rgba(0, 0, 0, 0.6);
+  background: rgba(251, 243, 222, 0.05);
+  text-align: center;
+}
+
+.reveal__prepared-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-h1);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--reveal-accent);
+}
+
+@media (min-width: 768px) {
+  .reveal__stage {
+    max-width: 640px;
+  }
+}

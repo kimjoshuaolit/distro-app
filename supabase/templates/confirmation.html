@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Your wedding reveal</title>
+  </head>
+  <!-- A couple's FIRST sign-in (Story 2.1): with email confirmations on, Auth sends
+       this template instead of magic_link.html when the account is new. -->
+  <body style="margin:0;padding:0;background:#20130c;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#20130c;">
+      <tr>
+        <td align="center" style="padding:40px 16px;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:480px;background:#fbf3de;border-radius:20px;">
+            <tr>
+              <td style="padding:32px 28px;font-family:Arial,Helvetica,sans-serif;color:#2b2a26;">
+                <!-- Darkened amber: 5.6:1 on cream (the #c4622d token is only 3.7:1). -->
+                <p style="margin:0 0 8px;font-size:14px;letter-spacing:0.12em;text-transform:uppercase;color:#9a4a1f;font-weight:bold;">
+                  Your wedding &middot; developed
+                </p>
+                <h1 style="margin:0 0 16px;font-size:28px;line-height:1.15;color:#20130c;">
+                  From your people
+                </h1>
+                <p style="margin:0 0 24px;font-size:16px;line-height:1.5;">
+                  Welcome in. This is your private way into the reveal &mdash; every roll your
+                  guests shot, kept just for the two of you. Tap below to open it; no password,
+                  ever.
+                </p>
+                <p style="margin:0 0 16px;">
+                  <a href="{{ .ConfirmationURL }}"
+                     style="display:inline-block;padding:14px 28px;border-radius:999px;background:#f5c518;color:#20130c;font-size:16px;font-weight:bold;text-decoration:none;">
+                    Open your reveal
+                  </a>
+                </p>
+                <p style="margin:0 0 24px;font-size:14px;line-height:1.5;color:#6b635a;">
+                  Button not working? Copy this link into your browser:<br />
+                  <a href="{{ .ConfirmationURL }}" style="color:#20130c;word-break:break-all;">{{ .ConfirmationURL }}</a>
+                </p>
+                <p style="margin:0;font-size:14px;line-height:1.5;color:#6b635a;">
+                  The link works once and expires in an hour. Next time, just ask for a new one
+                  on the reveal page. Didn't ask for this? You can ignore it.
+                </p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>

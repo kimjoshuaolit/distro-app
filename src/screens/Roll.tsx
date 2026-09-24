@@ -74,7 +74,7 @@ export default function Roll() {
   const session = getGuestSession(eventToken)
   const deviceToken = session?.deviceToken ?? null
   const uploader = useUploader(eventToken, deviceToken)
-  const roll = useRoll(eventToken, deviceToken, uploader.pendingCount)
+  const roll = useRoll(eventToken, deviceToken, session?.guestId ?? null, uploader.pendingCount)
   const [openId, setOpenId] = useState<string | null>(null)
   const { viewable, index: openIndex } = viewerState(roll.items, openId)
   const viewerOpen = openIndex >= 0

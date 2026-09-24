@@ -60,9 +60,10 @@ select is((select count(*)::int from public.shots), 2, 'an authenticated session
 reset role;
 set local role anon;
 
--- Guests can't read the guests table (names/tokens) at all.
+-- Guests can't read the guests table (names/tokens) at all. Since 2.1 anon has
+-- no column grants there, so the read is refused outright.
 set local request.headers = '{"x-device-token": "token-ana"}';
-select is((select count(*)::int from public.guests), 0, 'anon still cannot read guests');
+select throws_ok($$select count(*) from public.guests$$, '42501', NULL, 'anon still cannot read guests');
 
 -- Read-only: every write is refused (RLS rejects or silently filters).
 select throws_ok(
