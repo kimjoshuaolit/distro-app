@@ -1,7 +1,9 @@
 import type { Shot } from '../capture/db'
 import type { ServerShot } from '../lib/api'
 
-export type RollStatus = 'saved' | 'saving' | 'not_saved' | 'unavailable'
+// not_saved: refused over the 25/5 cap; too_late: refused because uploads for
+// the event had closed (Story 3.2). Both stay viewable on the device.
+export type RollStatus = 'saved' | 'saving' | 'not_saved' | 'too_late' | 'unavailable'
 
 export type RollMedia =
   | { kind: 'device'; blob: Blob } // still on the phone
@@ -46,7 +48,7 @@ export function mergeRoll(local: Shot[], server: ServerShot[] | null): RollItem[
     onDevice.add(shot.id)
     const remote = serverById.get(shot.id)
     let status: RollStatus
-    if (shot.uploadStatus === 'rejected') status = 'not_saved'
+    if (shot.uploadStatus === 'rejected') status = shot.rejectReason === 'closed' ? 'too_late' : 'not_saved'
     else if (shot.uploadStatus === 'uploaded' || remote?.uploadStatus === 'uploaded') status = 'saved'
     else status = 'saving'
     items.push({

@@ -31,7 +31,9 @@ export default function UploadIndicator({ state, pending, rejected = 0 }: Props)
     mod = 'uploadind--busy'
     busy = true
   } else if (rejected > 0) {
-    label = `${rejected} over the limit — not saved`
+    // Over the 25/5 cap, or uploads for the event had closed (3.2); My Roll
+    // says which for each shot.
+    label = `${rejected} couldn’t be saved`
     mod = 'uploadind--error'
   } else {
     label = 'All saved'

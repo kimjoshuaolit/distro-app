@@ -170,6 +170,7 @@
 }
 
 .frame__badge--not_saved,
+.frame__badge--too_late,
 .frame__badge--unavailable {
   color: var(--stamp-orange);
 }

@@ -69,6 +69,12 @@ describe('mergeRoll', () => {
     expect(item.media.kind).toBe('device')
   })
 
+  it('a shot refused because uploads had closed says so (not "over the limit")', () => {
+    const [item] = mergeRoll([{ ...local('late', '2026-09-19T12:00:00Z', 'rejected'), rejectReason: 'closed' }], [])
+    expect(item.status).toBe('too_late')
+    expect(item.media.kind).toBe('device')
+  })
+
   it('sorts unknown or garbled capture times last, deterministically', () => {
     const items = mergeRoll(
       [local('garbled', 'not-a-date'), local('ok', '2026-09-19T12:00:00Z')],

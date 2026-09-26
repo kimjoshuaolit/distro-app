@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { validateUploadRequest, extForContentType, MAX_BYTES } from './upload-rules.ts'
+import { validateUploadRequest, extForContentType, MAX_BYTES, reserveRefusal } from './upload-rules.ts'
 
 const uuid = '11111111-1111-4111-8111-111111111111'
 const base = {
@@ -100,5 +100,25 @@ describe('validateUploadRequest', () => {
   it('rejects non-object input', () => {
     expect(validateUploadRequest(null).ok).toBe(false)
     expect(validateUploadRequest('x').ok).toBe(false)
+  })
+})
+
+describe('reserveRefusal', () => {
+  it('reserved / exists carry on to signing', () => {
+    expect(reserveRefusal('reserved')).toBeNull()
+    expect(reserveRefusal('exists')).toBeNull()
+  })
+
+  it('the terminal refusals keep the exact codes the upload queue relies on', () => {
+    expect(reserveRefusal('cap_reached')).toMatchObject({ status: 409, code: 'cap_reached' })
+    expect(reserveRefusal('upload_closed')).toMatchObject({ status: 409, code: 'upload_closed' })
+  })
+
+  it('other refusals', () => {
+    expect(reserveRefusal('guest_not_found')).toMatchObject({ status: 404, code: 'guest_not_found' })
+    expect(reserveRefusal('bad_type')).toMatchObject({ status: 400, code: 'bad_request' })
+    for (const s of ['uploads_closed', '', undefined, null, 42]) {
+      expect(reserveRefusal(s)).toMatchObject({ status: 500, code: 'server_error' })
+    }
   })
 })

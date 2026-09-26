@@ -79,3 +79,29 @@ export function validateUploadRequest(raw: unknown): UploadRequestResult {
     },
   }
 }
+
+export type ReserveRefusal = { status: number; code: string; message: string }
+
+/**
+ * reserve_shot's refusal statuses → issue-upload-url's answer. null means
+ * "not a refusal" ('reserved' / 'exists' carry on to signing). The client
+ * treats cap_reached and upload_closed as terminal (no retry loop), so these
+ * codes are a contract with src/capture/uploadQueue.ts.
+ */
+export function reserveRefusal(status: unknown): ReserveRefusal | null {
+  switch (status) {
+    case 'reserved':
+    case 'exists':
+      return null
+    case 'guest_not_found':
+      return { status: 404, code: 'guest_not_found', message: 'Unknown guest.' }
+    case 'bad_type':
+      return { status: 400, code: 'bad_request', message: 'Invalid shot type.' }
+    case 'cap_reached':
+      return { status: 409, code: 'cap_reached', message: 'You’ve used all your shots of this type.' }
+    case 'upload_closed': // 0008: the event closed more than 7 days ago
+      return { status: 409, code: 'upload_closed', message: 'Uploads for this event have closed.' }
+    default:
+      return { status: 500, code: 'server_error', message: 'Could not reserve the shot.' }
+  }
+}

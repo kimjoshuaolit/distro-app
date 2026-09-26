@@ -6,6 +6,7 @@ import { useClipRecorder } from '../capture/useClipRecorder.ts'
 import { saveClip } from '../capture/captureClip.ts'
 import { useUploader } from '../capture/useUploader.ts'
 import { getGuestSession, updateRemaining } from '../lib/guestSession.ts'
+import { useEventWindow } from '../capture/useEventWindow.ts'
 import Counter from '../ui/Counter.tsx'
 import Shutter from '../ui/Shutter.tsx'
 import RecordButton from '../ui/RecordButton.tsx'
@@ -53,6 +54,10 @@ export default function Camera() {
   const flashTimer = useRef<number | null>(null)
   const recorder = useClipRecorder(camera.stream)
   const uploader = useUploader(eventToken, session?.deviceToken ?? null)
+  // Kim can close (or not yet have opened) the camera (Story 3.2). Only a
+  // positive server answer locks it; offline never does (AD-1).
+  const { lock, opensAt } = useEventWindow(eventToken)
+  const locked = lock !== 'open'
   const [photos, setPhotos] = useState(session?.photosRemaining ?? 0)
   const [clips, setClips] = useState(session?.clipsRemaining ?? 0)
   const [mode, setMode] = useState<CaptureMode>('photo')
@@ -78,7 +83,7 @@ export default function Camera() {
   )
 
   async function handleCapture() {
-    if (capturingRef.current || photosRef.current <= 0 || !videoRef.current || !session) return
+    if (capturingRef.current || locked || photosRef.current <= 0 || !videoRef.current || !session) return
     capturingRef.current = true
     setCapturing(true)
     setCaptureError(null)
@@ -141,7 +146,7 @@ export default function Camera() {
   function handleRecordToggle() {
     if (recorder.recording) {
       recorder.stop()
-    } else if (clipsRef.current > 0 && videoReady) {
+    } else if (!locked && clipsRef.current > 0 && videoReady) {
       setCaptureError(null)
       recorder.start(handleClipComplete)
     }
@@ -223,7 +228,22 @@ export default function Camera() {
 
           {flash && <div className="camera__flash" aria-hidden="true" />}
 
-          {currentFinished && !recorder.recording && (
+          {locked && !recorder.recording && (
+            <div className="camera__finished" role="status">
+              <p className="camera__finished-title">
+                {lock === 'closed' ? 'The camera’s closed 🎞️' : 'The camera isn’t open yet'}
+              </p>
+              <p className="camera__finished-body">
+                {lock === 'closed'
+                  ? 'Thanks for shooting! Any shots still uploading will finish on their own.'
+                  : opensAt
+                    ? `It opens ${new Date(opensAt).toLocaleString(undefined, { weekday: 'short', hour: 'numeric', minute: '2-digit' })} — keep this page handy.`
+                    : 'It opens when the celebration starts — keep this page handy.'}
+              </p>
+            </div>
+          )}
+
+          {!locked && currentFinished && !recorder.recording && (
             <div className="camera__finished" role="status">
               <p className="camera__finished-title">
                 {mode === 'photo' ? 'Your photo roll is finished 🎞️' : 'Your clips are all used 🎬'}
@@ -269,13 +289,13 @@ export default function Camera() {
               {mode === 'photo' ? (
                 <Shutter
                   onCapture={handleCapture}
-                  disabled={photosFinished || !videoReady}
+                  disabled={locked || photosFinished || !videoReady}
                   busy={capturing}
                 />
               ) : (
                 <RecordButton
                   recording={recorder.recording}
-                  disabled={(!recorder.recording && (clipsFinished || !videoReady)) || !recorder.supported}
+                  disabled={(!recorder.recording && (locked || clipsFinished || !videoReady)) || !recorder.supported}
                   onToggle={handleRecordToggle}
                 />
               )}

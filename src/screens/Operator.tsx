@@ -5,6 +5,7 @@ import { listEvents, requestOperatorLink, type EventSummary } from '../lib/opera
 import { useOperatorSession } from '../operator/useOperatorSession'
 import { formatWindow } from '../operator/localTime'
 import EventForm from '../operator/EventForm'
+import TableCards from '../operator/TableCards'
 import './Operator.css'
 
 const LINK_ERROR_COPY: Record<LinkError, string> = {
@@ -209,6 +210,7 @@ export default function Operator() {
   const { gate, email, sessionEpoch, retry } = useOperatorSession()
   const { eventId = null } = useParams()
   const isNew = useMatch('/operator/events/new') !== null
+  const isCards = useMatch('/operator/events/:eventId/cards') !== null
   const [status, setStatus] = useState('')
 
   return (
@@ -259,7 +261,13 @@ export default function Operator() {
       {gate.view === 'granted' && (
         // Remount per identity so nothing lingers across sign-ins.
         <div key={sessionEpoch}>
-          {isNew || eventId ? <EventForm eventId={isNew ? null : eventId} announce={setStatus} /> : <EventList />}
+          {isCards && eventId ? (
+            <TableCards eventId={eventId} />
+          ) : isNew || eventId ? (
+            <EventForm eventId={isNew ? null : eventId} announce={setStatus} />
+          ) : (
+            <EventList />
+          )}
           <footer className="op__footer">
             <span className="op__who">{email}</span>
             <SignOutButton />

@@ -1,14 +1,19 @@
+import { lazy, Suspense } from 'react'
 import { Routes, Route } from 'react-router-dom'
 import Placeholder from './screens/Placeholder.tsx'
 import Join from './screens/Join.tsx'
 import Camera from './screens/Camera.tsx'
 import Roll from './screens/Roll.tsx'
 import Reveal from './screens/Reveal.tsx'
-import Operator from './screens/Operator.tsx'
+import ChunkBoundary from './ui/ChunkBoundary.tsx'
 
 // My Roll is bundled eagerly on purpose: it must open offline (there's no
 // service worker to precache a lazy chunk), and a failed chunk fetch would
 // blank the whole app. It only adds a few KB.
+//
+// The operator console is the opposite: guests never open it, and it carries
+// the QR library, so it loads on demand and stays out of the guest bundle.
+const Operator = lazy(() => import('./screens/Operator.tsx'))
 
 export default function App() {
   return (
@@ -26,10 +31,20 @@ export default function App() {
       </Route>
       {/* Kim's operator console (Epic 3): magic-link sign-in; the database
           decides who the operator is. Child routes only select the view. */}
-      <Route path="/operator" element={<Operator />}>
+      <Route
+        path="/operator"
+        element={
+          <ChunkBoundary>
+            <Suspense fallback={<p className="app-loading">Opening the console…</p>}>
+              <Operator />
+            </Suspense>
+          </ChunkBoundary>
+        }
+      >
         <Route index element={null} />
         <Route path="events/new" element={null} />
         <Route path="events/:eventId" element={null} />
+        <Route path="events/:eventId/cards" element={null} />
       </Route>
       {/* Catch-all: unknown deep links fall back to the shell instead of a blank page. */}
       <Route path="*" element={<Placeholder />} />

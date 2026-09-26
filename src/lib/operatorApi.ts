@@ -102,6 +102,59 @@ export class SaveEventError extends Error {
   }
 }
 
+/** The typed `{ error: { code, message, field? } }` out of a functions.invoke error. */
+async function functionError(error: unknown): Promise<{ code: string; message: string; field: string | null }> {
+  let code = 'server_error'
+  let message = 'Something went wrong. Please try again.'
+  let field: string | null = null
+  const ctx = (error as { context?: Response }).context
+  if (ctx && typeof ctx.json === 'function') {
+    try {
+      const body = (await ctx.json()) as { error?: { code?: string; message?: string; field?: string } }
+      if (body?.error?.code) {
+        code = body.error.code
+        message = body.error.message ?? message
+        field = body.error.field ?? null
+      }
+    } catch {
+      // keep defaults
+    }
+  }
+  return { code, message, field }
+}
+
+export class WindowError extends Error {
+  code: string
+  constructor(code: string, message: string) {
+    super(message)
+    this.name = 'WindowError'
+    this.code = code
+  }
+}
+
+export type WindowTimes = { windowOpen: string; windowClose: string }
+
+/**
+ * Open now / Close now through set-window (Story 3.2): the server moves the
+ * window's ends to its own clock and answers with the new window. Throws
+ * `WindowError` (`not_operator`, `not_found`, `bad_request`, `server_error`).
+ */
+export async function setWindow(eventId: string, action: 'open' | 'close'): Promise<WindowTimes> {
+  const { data, error } = await supabase.functions.invoke('set-window', {
+    body: { eventId, action },
+    timeout: FUNCTION_TIMEOUT_MS,
+  })
+  if (error) {
+    const { code, message } = await functionError(error)
+    throw new WindowError(code, message)
+  }
+  const d = data as { windowOpen?: unknown; windowClose?: unknown } | null
+  if (typeof d?.windowOpen !== 'string' || typeof d?.windowClose !== 'string') {
+    throw new WindowError('server_error', 'Unexpected response from the server.')
+  }
+  return { windowOpen: d.windowOpen, windowClose: d.windowClose }
+}
+
 /**
  * Create (eventId null) or update an event through save-event. Resolves with
  * the saved event's id. Throws `SaveEventError` with the server's code
@@ -114,22 +167,7 @@ export async function saveEvent(request: SaveEventRequest): Promise<string> {
     timeout: FUNCTION_TIMEOUT_MS,
   })
   if (error) {
-    let code = 'server_error'
-    let message = 'Something went wrong. Please try again.'
-    let field: string | null = null
-    const ctx = (error as { context?: Response }).context
-    if (ctx && typeof ctx.json === 'function') {
-      try {
-        const body = (await ctx.json()) as { error?: { code?: string; message?: string; field?: string } }
-        if (body?.error?.code) {
-          code = body.error.code
-          message = body.error.message ?? message
-          field = body.error.field ?? null
-        }
-      } catch {
-        // keep defaults
-      }
-    }
+    const { code, message, field } = await functionError(error)
     throw new SaveEventError(code, message, field)
   }
   const id = (data as { eventId?: unknown } | null)?.eventId

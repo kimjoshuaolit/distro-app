@@ -70,7 +70,7 @@ describe('uploadShot', () => {
     const outcome = await uploadShot(shot, 'dev', deps)
 
     expect(outcome).toBe('cap_reached')
-    expect(deps.markRejected).toHaveBeenCalledWith(shot.id)
+    expect(deps.markRejected).toHaveBeenCalledWith(shot.id, 'cap')
     expect(deps.putToR2).not.toHaveBeenCalled()
     expect(deps.markUploaded).not.toHaveBeenCalled()
   })
@@ -108,7 +108,19 @@ describe('uploadShot error classification (async rejections)', () => {
     const deps = makeDeps({ issueUploadUrl: rejectWith('cap_reached') })
     const outcome = await uploadShot(makeShot('c-1'), 'dev', deps)
     expect(outcome).toBe('cap_reached')
-    expect(deps.markRejected).toHaveBeenCalledWith('c-1')
+    expect(deps.markRejected).toHaveBeenCalledWith('c-1', 'cap')
+  })
+
+  it('treats upload_closed (7+ days after the close) as terminal: marked rejected, no retry loop', async () => {
+    const deps = makeDeps({ issueUploadUrl: rejectWith('upload_closed') })
+    expect(await uploadShot(makeShot('u-1'), 'dev', deps)).toBe('upload_closed')
+    expect(deps.markRejected).toHaveBeenCalledWith('u-1', 'closed')
+    expect(deps.markUploaded).not.toHaveBeenCalled()
+  })
+
+  it('an upload_closed batch settles (nothing left to retry)', async () => {
+    const deps = makeDeps({ issueUploadUrl: rejectWith('upload_closed') })
+    await expect(drainOnce([makeShot('u-2'), makeShot('u-3')], 'dev', deps)).resolves.toEqual({ allSettled: true })
   })
 
   it('skips a shot-specific failure without marking it (it stays local)', async () => {
@@ -186,7 +198,7 @@ describe('drainOnce', () => {
     const res = await drainOnce(shots, 'dev', deps)
 
     expect(res.allSettled).toBe(true)
-    expect(deps.markRejected).toHaveBeenCalledWith('a-1')
+    expect(deps.markRejected).toHaveBeenCalledWith('a-1', 'cap')
     expect(deps.markUploaded).toHaveBeenCalledWith('b-2')
   })
 })

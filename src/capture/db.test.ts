@@ -103,6 +103,16 @@ describe('upload queue helpers', () => {
     expect(await countRejected('E2')).toBe(0)
   })
 
+  it('markRejected records why: over the cap by default, or uploads closed', async () => {
+    await putShot(shot('cap-1', 'E3', 'photo'))
+    await putShot(shot('late-1', 'E3', 'photo'))
+    await markRejected('cap-1')
+    await markRejected('late-1', 'closed')
+    const byId = Object.fromEntries((await getShotsByEvent('E3')).map((s) => [s.id, s.rejectReason]))
+    expect(byId).toEqual({ 'cap-1': 'cap', 'late-1': 'closed' })
+    expect(await countRejected('E3')).toBe(2)
+  })
+
   it('marking an unknown id is a harmless no-op', async () => {
     await expect(markUploaded('missing')).resolves.toBeUndefined()
   })

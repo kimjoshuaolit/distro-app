@@ -97,3 +97,19 @@ Surfaced during builds; revisit deliberately. Append-only.
 - source_spec: `spec-3-1-operator-login-event-setup.md`
   summary: Add component and hook tests for `useOperatorSession`, `EventForm` and `Operator` once a jsdom + React Testing Library harness exists. They were verified live in the browser for 3.1.
   evidence: The review found only the pure helpers unit-tested, which matches the existing "hook lifecycle tests need a jsdom + RTL harness" deferral from Story 1.4.
+
+- source_spec: `spec-3-2-qr-window-control.md`
+  summary: Print one real test sheet of table cards on A4 and on Letter, and scan every QR with two phones, before the wedding.
+  evidence: The card sizes (90×125 mm, 2×2 inside 10 mm margins) and the QR payload were checked by measurement and by decoding offline, but no print preview could be rendered in the automated browser.
+
+- source_spec: `spec-3-2-qr-window-control.md`
+  summary: Consider encoding a configured public origin (e.g. `VITE_PUBLIC_ORIGIN`) in the QR instead of `window.location.origin`, so cards printed from a preview deploy or an alternate domain still point at the live site.
+  evidence: `isLocalOrigin` warns about localhost/LAN, but a `*.pages.dev` preview or old domain would pass silently. The review raised it.
+
+- source_spec: `spec-3-2-qr-window-control.md`
+  summary: A shot refused with `upload_closed` stays rejected on the device even if the operator later re-opens the event (uploads accepted again).
+  evidence: `upload_closed` is terminal client-side by design (no retry loop). A re-open more than 7 days after a close is unlikely, but it would need a "retry refused shots" pass. The review raised it.
+
+- source_spec: `spec-3-2-qr-window-control.md`
+  summary: Component tests for `WindowControl` (confirm/cancel, skew, errors), `TableCards` (missing/failed/retry) and the Camera lock wiring once a jsdom + React Testing Library harness exists. Pure logic is covered: the window watcher, window rules, QR payload.
+  evidence: Same harness gap as the earlier hook and component deferrals. All three were verified live in the browser for 3.2.

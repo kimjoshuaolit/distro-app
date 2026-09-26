@@ -1,14 +1,16 @@
-import type { Shot } from './db'
+import type { RejectReason, Shot } from './db'
 
 /**
  * - 'uploaded'    terminal: stored, confirmed, flipped locally
  * - 'cap_reached' terminal: server refused (no allotment); marked rejected
+ * - 'upload_closed' terminal: the event closed more than 7 days ago (Story
+ *                 3.2); marked rejected — the shot stays on the device
  * - 'skipped'     this shot failed for a shot-specific reason (bad request,
  *                 expired signature, object not yet visible); it stays local
  *                 and is retried on a later pass, but doesn't block the others
  * - 'retry'       transient (offline, timeout, 5xx); stop the batch and back off
  */
-export type UploadOutcome = 'uploaded' | 'cap_reached' | 'skipped' | 'retry'
+export type UploadOutcome = 'uploaded' | 'cap_reached' | 'upload_closed' | 'skipped' | 'retry'
 
 // Injected so the orchestration is unit-testable without network or IndexedDB.
 export type UploadDeps = {
@@ -16,7 +18,7 @@ export type UploadDeps = {
   putToR2: (uploadUrl: string, blob: Blob) => Promise<void>
   confirmUpload: (deviceToken: string, clientShotId: string) => Promise<void>
   markUploaded: (id: string) => Promise<void>
-  markRejected: (id: string) => Promise<void>
+  markRejected: (id: string, reason: RejectReason) => Promise<void>
 }
 
 /** Exponential backoff with a ceiling. Deterministic (no jitter) for tests. */
@@ -54,10 +56,10 @@ export async function uploadShot(
     return 'uploaded'
   } catch (err) {
     const code = errorCode(err)
-    if (code === 'cap_reached') {
+    if (code === 'cap_reached' || code === 'upload_closed') {
       try {
-        await deps.markRejected(shot.id)
-        return 'cap_reached'
+        await deps.markRejected(shot.id, code === 'upload_closed' ? 'closed' : 'cap')
+        return code
       } catch {
         return 'retry' // couldn't persist the rejection; try again later
       }

@@ -7,6 +7,7 @@ import {
   type SaveEventField,
 } from '../../supabase/functions/_shared/operator-rules.ts'
 import { isoToLocalInput, localInputToIso, localZoneName } from './localTime'
+import WindowControl from './WindowControl'
 
 type Values = { coupleNames: string; opens: string; closes: string; email1: string; email2: string }
 
@@ -62,6 +63,11 @@ function EventLinks({ eventId }: { eventId: string }) {
       <p className="op__code">{`${origin}/j/${eventId}`}</p>
       <p className="op__label">The couple’s reveal</p>
       <p className="op__code">{`${origin}/reveal/${eventId}`}</p>
+      <div className="op__actions op__actions--tight">
+        <Link className="op__primary" to={`/operator/events/${eventId}/cards`}>
+          Table cards &amp; QR
+        </Link>
+      </div>
     </section>
   )
 }
@@ -249,6 +255,23 @@ export default function EventForm({ eventId, announce }: { eventId: string | nul
     <>
       {back}
       <h1 className="op__title">{title}</h1>
+      {eventId && (
+        <WindowControl
+          eventId={eventId}
+          windowOpen={stored.openIso}
+          windowClose={stored.closeIso}
+          disabled={saving}
+          onChanged={({ windowOpen, windowClose }) => {
+            // The server moved the window: show it in the form too, so a later
+            // save doesn't put the old times back.
+            const opens = isoToLocalInput(windowOpen)
+            const closes = isoToLocalInput(windowClose)
+            setValues((v) => ({ ...v, opens, closes }))
+            setStored({ opens, closes, openIso: windowOpen, closeIso: windowClose })
+            announce('Camera window updated.')
+          }}
+        />
+      )}
       <form className="op__form" onSubmit={handleSubmit} noValidate aria-busy={saving || undefined}>
         <label className="op__label" htmlFor="coupleNames">
           Couple names

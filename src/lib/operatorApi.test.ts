@@ -34,8 +34,17 @@ vi.mock('./supabase', () => ({
   },
 }))
 
-const { requestOperatorLink, isOperator, listEvents, getEvent, saveEvent, SaveEventError, OperatorReadError } =
-  await import('./operatorApi.ts')
+const {
+  requestOperatorLink,
+  isOperator,
+  listEvents,
+  getEvent,
+  saveEvent,
+  setWindow,
+  SaveEventError,
+  WindowError,
+  OperatorReadError,
+} = await import('./operatorApi.ts')
 
 const EVENT = '00000000-0000-0000-0000-000000000001'
 const row = { id: EVENT, couple_names: 'Ana & Ben', window_open: '2026-11-14T06:00:00+00:00', window_close: '2026-11-14T18:00:00+00:00' }
@@ -134,6 +143,28 @@ describe('getEvent', () => {
     rpcResult.operator_events = { data: [row], error: null }
     rpcResult.operator_couple_emails = { data: null, error: { message: 'x' }, status: 500 }
     await expect(getEvent(EVENT)).rejects.toMatchObject({ name: 'OperatorReadError' })
+  })
+})
+
+describe('setWindow', () => {
+  it('posts the action to set-window and returns the new window', async () => {
+    invoke.mockResolvedValue({ data: { windowOpen: 'a', windowClose: 'b' }, error: null })
+    await expect(setWindow(EVENT, 'close')).resolves.toEqual({ windowOpen: 'a', windowClose: 'b' })
+    const [name, opts] = invoke.mock.calls[0]
+    expect(name).toBe('set-window')
+    expect(opts.body).toEqual({ eventId: EVENT, action: 'close' })
+    expect(opts.timeout).toBeGreaterThan(0)
+  })
+
+  it('carries the server code; a malformed answer is a server_error', async () => {
+    invoke.mockResolvedValue(typedError('not_operator'))
+    const err = await setWindow(EVENT, 'open').catch((e: unknown) => e)
+    expect(err).toBeInstanceOf(WindowError)
+    expect(err).toMatchObject({ code: 'not_operator' })
+    for (const data of [null, {}, { windowOpen: 'a' }, { windowOpen: 1, windowClose: 'b' }]) {
+      invoke.mockResolvedValue({ data, error: null })
+      await expect(setWindow(EVENT, 'open'), JSON.stringify(data)).rejects.toMatchObject({ code: 'server_error' })
+    }
   })
 })
 

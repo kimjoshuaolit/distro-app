@@ -2,10 +2,13 @@
 // before any network. Raw IndexedDB — one object store, keyed by shot id.
 
 export type ShotType = 'photo' | 'clip'
-// 'rejected' is client-only: the server refused to reserve it (cap reached), so
-// no server row exists and the queue must stop retrying it. Server rows are only
-// ever 'local' | 'uploaded'.
+// 'rejected' is client-only: the server refused to reserve it (cap reached, or
+// uploads for the event closed — Story 3.2), so no server row exists and the
+// queue must stop retrying it. Server rows are only ever 'local' | 'uploaded'.
 export type UploadStatus = 'local' | 'uploaded' | 'rejected'
+
+/** Why the server refused a shot: over the 25/5 cap, or the upload window had ended. */
+export type RejectReason = 'cap' | 'closed'
 
 export type Shot = {
   id: string
@@ -15,6 +18,8 @@ export type Shot = {
   blob: Blob
   capturedAt: string // ISO-8601 UTC
   uploadStatus: UploadStatus
+  /** Set with 'rejected'; absent on shots rejected before 3.2 (those were all 'cap'). */
+  rejectReason?: RejectReason
 }
 
 const DB_NAME = 'drc'
@@ -89,7 +94,7 @@ export async function getPendingUploads(eventId: string): Promise<Shot[]> {
     .sort((a, b) => a.capturedAt.localeCompare(b.capturedAt))
 }
 
-async function setUploadStatus(id: string, status: UploadStatus): Promise<void> {
+async function setUploadStatus(id: string, status: UploadStatus, reason?: RejectReason): Promise<void> {
   const db = await openDb()
   try {
     await new Promise<void>((resolve, reject) => {
@@ -100,6 +105,7 @@ async function setUploadStatus(id: string, status: UploadStatus): Promise<void> 
         const shot = get.result as Shot | undefined
         if (shot) {
           shot.uploadStatus = status
+          if (reason) shot.rejectReason = reason
           store.put(shot)
         }
       }
@@ -117,7 +123,7 @@ export function markUploaded(id: string): Promise<void> {
   return setUploadStatus(id, 'uploaded')
 }
 
-/** Mark a shot the server refused to reserve (cap reached) so we stop retrying it. */
-export function markRejected(id: string): Promise<void> {
-  return setUploadStatus(id, 'rejected')
+/** Mark a shot the server refused to reserve (cap reached, or uploads closed) so we stop retrying it. */
+export function markRejected(id: string, reason: RejectReason = 'cap'): Promise<void> {
+  return setUploadStatus(id, 'rejected', reason)
 }

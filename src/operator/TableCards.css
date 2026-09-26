@@ -1,0 +1,144 @@
+/* Printable table cards (Story 3.2): four Kodak Sunset cards per sheet. Card
+   sizes are physical (mm) so they print the same on A4 (210×297) and Letter
+   (216×279): 2 × 90mm + gap across, 2 × 125mm + gap down, inside 10mm margins. */
+.cards__sheet {
+  display: grid;
+  grid-template-columns: repeat(2, 90mm);
+  grid-auto-rows: 125mm;
+  gap: 5mm;
+  justify-content: center;
+  margin-top: var(--space-6);
+}
+
+.card {
+  box-sizing: border-box;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  overflow: hidden;
+  padding: 16mm 7mm 6mm;
+  border: 0.4mm dashed #b9ad94; /* cut line */
+  border-radius: 3mm;
+  background: var(--cream);
+  color: var(--ink);
+  text-align: center;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+
+/* The FunSaver stripe: gold with a red rule under it. */
+.card__band {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 10mm;
+  background: var(--gold);
+  border-bottom: 2.2mm solid var(--kodak-red);
+}
+
+.card__names {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 7.5mm;
+  line-height: 1.05;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  overflow-wrap: anywhere;
+}
+
+.card__lead {
+  margin: 2mm 0 3mm;
+  font-family: var(--font-body);
+  font-size: 4mm;
+  font-weight: 700;
+}
+
+.card__qr {
+  display: block;
+  width: 56mm;
+  height: 56mm;
+  background: #ffffff;
+  border-radius: 1.5mm;
+}
+
+.card__rules {
+  margin: 3mm 0 0;
+  font-size: 3.2mm;
+}
+
+.card__foot {
+  margin: auto 0 0;
+  font-size: 3.2mm;
+  color: #9a4a1f;
+  font-weight: 700;
+}
+
+.op__code--inline {
+  display: inline;
+  padding: 0 var(--space-1);
+}
+
+/* Below the true-size sheet width (~2 × 90mm + gap, inside the console column) the preview shrinks; print keeps true size. */
+@media screen and (max-width: 760px) {
+  .cards__sheet {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-auto-rows: auto;
+    gap: var(--space-2);
+  }
+
+  .card {
+    aspect-ratio: 90 / 125;
+    padding: 12% 4% 4%;
+  }
+
+  .card__names {
+    font-size: 4.5vw;
+  }
+
+  .card__lead,
+  .card__rules,
+  .card__foot {
+    font-size: 2.8vw;
+  }
+
+  .card__qr {
+    width: 70%;
+    height: auto;
+  }
+
+  .card__band {
+    height: 8%;
+  }
+}
+
+@page {
+  margin: 10mm;
+}
+
+@media print {
+  body:has(.cards-page) {
+    background: #ffffff;
+  }
+
+  .op:has(.cards-page) {
+    max-width: none;
+    min-height: 0;
+    padding: 0;
+    background: #ffffff;
+  }
+
+  /* Only the cards print: no console chrome, toolbar or sign-out footer. */
+  .op:has(.cards-page) .op__kicker,
+  .op:has(.cards-page) .op__footer,
+  .cards__screen-only {
+    display: none !important;
+  }
+
+  .cards__sheet {
+    margin: 0;
+  }
+
+  .card {
+    break-inside: avoid;
+  }
+}

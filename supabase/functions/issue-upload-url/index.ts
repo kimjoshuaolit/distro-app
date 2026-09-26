@@ -2,7 +2,7 @@
 // mints a short-lived signed R2 PUT URL (AD-2). Runs on Supabase Edge (Deno),
 // uses the service role, and never lets R2 creds reach the client.
 import { createClient } from 'jsr:@supabase/supabase-js@2'
-import { validateUploadRequest } from '../_shared/upload-rules.ts'
+import { reserveRefusal, validateUploadRequest } from '../_shared/upload-rules.ts'
 import { presignPut, PUT_TTL_SECONDS } from '../_shared/r2.ts'
 
 const cors = {
@@ -56,12 +56,10 @@ Deno.serve(async (req: Request) => {
     | undefined
   if (!row) return fail('server_error', 'Could not reserve the shot.', 500)
 
-  if (row.status === 'guest_not_found') return fail('guest_not_found', 'Unknown guest.', 404)
-  if (row.status === 'bad_type') return fail('bad_request', 'Invalid shot type.', 400)
-  if (row.status === 'cap_reached') {
-    return fail('cap_reached', 'You’ve used all your shots of this type.', 409)
-  }
-  if ((row.status !== 'reserved' && row.status !== 'exists') || !row.r2_key || !row.shot_id) {
+  // cap_reached / upload_closed (0008) are terminal for the client's queue.
+  const refusal = reserveRefusal(row.status)
+  if (refusal) return fail(refusal.code, refusal.message, refusal.status)
+  if (!row.r2_key || !row.shot_id) {
     return fail('server_error', 'Could not reserve the shot.', 500)
   }
 

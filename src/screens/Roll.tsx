@@ -13,6 +13,7 @@ const BADGE: Record<RollStatus, string> = {
   saved: 'Saved',
   saving: 'Saving…',
   not_saved: 'Not saved — over the limit',
+  too_late: 'Not saved — uploads had closed',
   unavailable: 'Unavailable',
 }
 
