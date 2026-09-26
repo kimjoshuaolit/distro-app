@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { useParams } from 'react-router-dom'
 import {
   checkCoupleEmail,
@@ -11,6 +11,9 @@ import {
 } from '../lib/coupleAuth.ts'
 import { useCoupleSession } from '../couple/useCoupleSession.ts'
 import type { GateView } from '../couple/coupleGate.ts'
+import { useCollection } from '../couple/useCollection.ts'
+import RollShelf from '../couple/RollShelf.tsx'
+import CoupleRoll from '../couple/CoupleRoll.tsx'
 import './Reveal.css'
 
 const LINK_ERROR_COPY: Record<LinkError, string> = {
@@ -31,7 +34,7 @@ const VIEW_STATUS: Record<GateView, string> = {
   notFound: 'This reveal link doesn’t look right.',
   login: '',
   denied: 'This reveal belongs to another couple.',
-  granted: 'You’re signed in. Your reveal is being prepared.',
+  granted: 'You’re signed in.',
   error: '',
 }
 
@@ -183,12 +186,97 @@ function LoginForm({
 }
 
 /**
+ * The signed-in view (2.2): the roll shelf at /reveal/:eventId, or one guest's
+ * roll at /reveal/:eventId/roll/:guestId. The collection loads once for both,
+ * so moving between them never refetches it.
+ */
+function Collection({
+  eventId,
+  guestId,
+  footer,
+}: {
+  eventId: string
+  guestId: string | null
+  footer: ReactNode
+}) {
+  const { status, rolls, urls, unavailable, reportBroken, reportLoaded, retry } = useCollection(eventId, guestId)
+
+  // A roll deep link gets its own loading / error / not-here states.
+  if (guestId !== null) {
+    return (
+      <CoupleRoll
+        eventId={eventId}
+        guestId={guestId}
+        status={status}
+        roll={rolls.find((r) => r.guestId === guestId)}
+        urls={urls}
+        unavailable={unavailable}
+        onMediaError={reportBroken}
+        onMediaLoad={reportLoaded}
+        onRetry={retry}
+        header={<Kicker />}
+        footer={footer}
+      />
+    )
+  }
+
+  return (
+    <>
+      <Kicker />
+      <h1 className="reveal__title">From your people</h1>
+
+      {status === 'loading' && <p className="reveal__body">Developing your guests’ rolls…</p>}
+
+      {status === 'error' && (
+        <>
+          <p className="reveal__notice" role="alert">
+            We couldn’t bring your rolls in just now — check your connection and try again.
+          </p>
+          <div className="reveal__actions">
+            <button type="button" className="reveal__primary reveal__primary--inline" onClick={retry}>
+              Try again
+            </button>
+          </div>
+        </>
+      )}
+
+      {status === 'ready' && rolls.length === 0 && (
+        <div className="reveal__prepared">
+          <p className="reveal__prepared-title">Your guests’ rolls are still developing</p>
+          <p className="reveal__body">
+            As your guests’ shots finish uploading, each roll will appear here under their name —
+            just for the two of you.
+          </p>
+        </div>
+      )}
+
+      {status === 'ready' && rolls.length > 0 && (
+        <>
+          <p className="reveal__body">Every roll, by the guest who shot it. Open one to see it all.</p>
+          <RollShelf
+            eventId={eventId}
+            rolls={rolls}
+            urls={urls}
+            unavailable={unavailable}
+            onMediaError={reportBroken}
+            onMediaLoad={reportLoaded}
+          />
+        </>
+      )}
+
+      {footer}
+    </>
+  )
+}
+
+/**
  * C1 Reveal at /reveal/:eventId (Story 2.1): the couple signs in with a magic
- * link; the database decides whether this session may see this event. The
- * signed-in view is a calm "being prepared" shell that 2.2/2.3 fill in.
+ * link; the database decides whether this session may see this event. Signed
+ * in, it shows the couple's collection (2.2): the roll shelf, and each guest's
+ * roll at /reveal/:eventId/roll/:guestId, under the same gate.
  */
 export default function Reveal() {
-  const { eventId = '' } = useParams()
+  const { eventId = '', guestId = null } = useParams()
   const { gate, email, retrying, retry, sessionEpoch } = useCoupleSession(eventId)
   // Both are tied to where they happened, so they vanish when the screen or
   // the signed-in identity changes — no effect needed to clear them.
@@ -209,7 +297,7 @@ export default function Reveal() {
         : VIEW_STATUS[gate.view]
 
   return (
-    <main className="reveal">
+    <main className={gate.view === 'granted' ? 'reveal reveal--wide' : 'reveal'}>
       {/* The one live region: calm progress/state changes. Errors use role="alert". */}
       <p className="reveal__sr-only" role="status" aria-live="polite">
         {status}
@@ -284,20 +372,17 @@ export default function Reveal() {
         )}
 
         {gate.view === 'granted' && (
-          <>
-            <Kicker />
-            <h1 className="reveal__title">From your people</h1>
-            <div className="reveal__prepared">
-              <p className="reveal__prepared-title">Your reveal is being prepared</p>
-              <p className="reveal__body">
-                Every roll your guests shot is developing. When it’s ready, it’ll be waiting right
-                here — just the two of you.
-              </p>
-            </div>
-            <div className="reveal__actions">
-              <SignOutButton onError={showSignOutError} />
-            </div>
-          </>
+          // Remount per identity so one couple's collection never lingers for the next.
+          <Collection
+            key={`${eventId}:${sessionEpoch}`}
+            eventId={eventId}
+            guestId={guestId}
+            footer={
+              <div className="reveal__actions">
+                <SignOutButton onError={showSignOutError} />
+              </div>
+            }
+          />
         )}
 
         {signOutMessage && (

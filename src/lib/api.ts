@@ -235,6 +235,106 @@ export async function issueViewUrls(deviceToken: string, clientShotIds: string[]
   }
 }
 
+/** A guest of the couple's event, as the collection needs it (2.2). */
+export type CollectionGuest = { id: string; firstName: string; createdAt: string | null }
+
+/** An uploaded shot in the couple's collection: metadata only, addressed by `shots.id`. */
+export type CollectionShot = {
+  id: string
+  guestId: string
+  type: 'photo' | 'clip'
+  capturedAt: string | null
+}
+
+export type Collection = { guests: CollectionGuest[]; shots: CollectionShot[] }
+
+/** PostgREST caps every response at `max_rows` (supabase/config.toml), so reads page. */
+export const COLLECTION_PAGE_SIZE = 1000
+
+/** Guest ids per `in.(…)` filter, so the request URL stays well under proxy limits. */
+export const COLLECTION_GUEST_CHUNK = 100
+
+type Page<T> = PromiseLike<{ data: T[] | null; error: unknown }>
+
+/** Read every row of a query by walking `range` pages until a short page. */
+async function readAllPages<T>(page: (from: number, to: number) => Page<T>): Promise<T[]> {
+  const rows: T[] = []
+  for (let from = 0; ; from += COLLECTION_PAGE_SIZE) {
+    const { data, error } = await page(from, from + COLLECTION_PAGE_SIZE - 1)
+    if (error) throw new Error('Could not load the collection.')
+    const batch = data ?? []
+    rows.push(...batch)
+    if (batch.length < COLLECTION_PAGE_SIZE) return rows
+  }
+}
+
+type GuestRow = { id: string; first_name: string; created_at: string | null }
+type CollectionShotRow = { id: string; guest_id: string; type: 'photo' | 'clip'; captured_at: string | null }
+
+/**
+ * The couple's whole collection for one event, read through the couple RLS
+ * (2.1): the event's guests (names for attribution), then their uploaded
+ * shots. Shots are filtered to those guest ids so rows visible for any other
+ * reason (another event the same inbox is on, a guest roll on this phone)
+ * never join this event's collection. Every read is paged past `max_rows` and
+ * ordered by id so pages are stable. Throws on any failure.
+ */
+export async function getCollection(eventId: string): Promise<Collection> {
+  const guestRows = await readAllPages<GuestRow>((from, to) =>
+    supabase
+      .from('guests')
+      .select('id, first_name, created_at')
+      .eq('event_id', eventId)
+      .order('id', { ascending: true })
+      .range(from, to)
+      .abortSignal(AbortSignal.timeout(FUNCTION_TIMEOUT_MS)),
+  )
+
+  const guestIds = guestRows.map((g) => g.id)
+  const shotRows: CollectionShotRow[] = []
+  for (let i = 0; i < guestIds.length; i += COLLECTION_GUEST_CHUNK) {
+    const chunk = guestIds.slice(i, i + COLLECTION_GUEST_CHUNK)
+    shotRows.push(
+      ...(await readAllPages<CollectionShotRow>((from, to) =>
+        supabase
+          .from('shots')
+          .select('id, guest_id, type, captured_at')
+          .eq('upload_status', 'uploaded')
+          .in('guest_id', chunk)
+          .order('id', { ascending: true })
+          .range(from, to)
+          .abortSignal(AbortSignal.timeout(FUNCTION_TIMEOUT_MS)),
+      )),
+    )
+  }
+
+  return {
+    guests: guestRows.map((g) => ({ id: g.id, firstName: g.first_name, createdAt: g.created_at })),
+    shots: shotRows.map((s) => ({ id: s.id, guestId: s.guest_id, type: s.type, capturedAt: s.captured_at })),
+  }
+}
+
+/**
+ * Short-lived signed view URLs for up to 30 of the couple's shots (AD-2,
+ * couple tier). The session JWT rides along automatically; the function checks
+ * it can read `eventId` through RLS before signing. Ids it won't vouch for are
+ * absent from `urls`.
+ */
+export async function issueCoupleViewUrls(eventId: string, shotIds: string[]): Promise<ViewUrls> {
+  const { data, error } = await supabase.functions.invoke('issue-couple-view-urls', {
+    body: { eventId, shotIds },
+    timeout: FUNCTION_TIMEOUT_MS,
+  })
+  if (error) {
+    const { message } = await parseFunctionError(error)
+    throw new Error(message)
+  }
+  return {
+    urls: (data?.urls ?? {}) as Record<string, string>,
+    expiresIn: typeof data?.expiresIn === 'number' ? data.expiresIn : 0,
+  }
+}
+
 /** Mark the shot uploaded server-side after a successful PUT. Idempotent. */
 export async function confirmUpload(deviceToken: string, clientShotId: string): Promise<void> {
   const { error } = await supabase.functions.invoke('confirm-upload', {

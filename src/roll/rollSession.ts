@@ -84,10 +84,17 @@ export function createViewUrlCache(fetchUrls: (ids: string[]) => Promise<ViewUrl
     invalidate(id: string): void {
       byId.delete(id)
     },
-    /** Earliest expiry among cached URLs, for scheduling a refresh; null if none. */
-    nextExpiry(): number | null {
+    /**
+     * Earliest expiry among cached URLs, for scheduling a refresh; null if none.
+     * `ids` narrows it to the URLs still on screen, so links nobody is looking
+     * at any more can't keep waking the refresh timer.
+     */
+    nextExpiry(ids?: string[]): number | null {
       let min: number | null = null
-      for (const e of byId.values()) min = min === null ? e.expiresAt : Math.min(min, e.expiresAt)
+      const entries = ids ? ids.map((id) => byId.get(id)) : [...byId.values()]
+      for (const e of entries) {
+        if (e) min = min === null ? e.expiresAt : Math.min(min, e.expiresAt)
+      }
       return min
     },
   }

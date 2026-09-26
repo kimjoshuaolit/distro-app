@@ -1,0 +1,109 @@
+/* The roll shelf (2.2): cream-bordered prints laid out on the warm reveal
+   stage, a little askew like prints on a table. Quiet — no gloss. */
+.shelf {
+  list-style: none;
+  margin: var(--space-6) 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-6) var(--space-4);
+}
+
+.shelf > li:nth-child(odd) .print {
+  transform: rotate(-1deg);
+}
+
+.shelf > li:nth-child(even) .print {
+  transform: rotate(0.8deg);
+}
+
+.print {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-height: 44px;
+  padding: var(--space-2) var(--space-2) var(--space-3);
+  border-radius: 2px;
+  background: var(--reveal-surface);
+  color: var(--ink);
+  text-decoration: none;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+  transition: transform 160ms ease;
+}
+
+.shelf > li .print:hover,
+.shelf > li .print:focus-visible {
+  transform: rotate(0) translateY(-2px);
+}
+
+.print:focus-visible {
+  outline: 3px solid var(--reveal-accent);
+  outline-offset: 4px;
+}
+
+.print__cover {
+  position: relative;
+  display: block;
+  aspect-ratio: 3 / 4;
+  overflow: hidden;
+  background: var(--viewfinder-bg);
+}
+
+.print__cover img,
+.print__cover video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* No link yet, or it failed: an undeveloped frame, name and count still shown. */
+.print__cover--blank {
+  background:
+    linear-gradient(160deg, rgba(196, 98, 45, 0.25), transparent 60%),
+    var(--viewfinder-bg);
+}
+
+.print__play {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--reveal-accent);
+  font-size: 1.6rem;
+  text-shadow: 0 0 8px rgba(26, 18, 12, 0.9);
+}
+
+.print__label {
+  margin-top: var(--space-2);
+  font-family: var(--font-body);
+  font-size: var(--text-body);
+  font-weight: 700;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.print__count {
+  font-size: var(--text-body);
+  line-height: 1.3;
+}
+
+@media (min-width: 640px) {
+  .shelf {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 960px) {
+  .shelf {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: var(--space-8) var(--space-6);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .print {
+    transition: none;
+  }
+}

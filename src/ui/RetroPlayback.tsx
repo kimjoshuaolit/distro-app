@@ -7,13 +7,15 @@ type Props = {
   capturedAt: string | null
   label: string
   onError?: () => void
+  /** Optional: the clip's metadata loaded (the element is now using `src`). */
+  onLoaded?: () => void
 }
 
 /**
  * Plays a clip with the FunSaver look applied at playback (AD-8): warm grade,
  * grain, vignette and a date stamp are all CSS layers over an untouched file.
  */
-export default function RetroPlayback({ src, capturedAt, label, onError }: Props) {
+export default function RetroPlayback({ src, capturedAt, label, onError, onLoaded }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const [playing, setPlaying] = useState(false)
   const stamp = capturedAt ? formatStamp(new Date(capturedAt)) : null
@@ -38,6 +40,7 @@ export default function RetroPlayback({ src, capturedAt, label, onError }: Props
         onEnded={() => setPlaying(false)}
         onClick={toggle}
         onError={onError}
+        onLoadedMetadata={onLoaded}
         aria-label={label}
       />
       <div className="retro__grain" aria-hidden="true" />

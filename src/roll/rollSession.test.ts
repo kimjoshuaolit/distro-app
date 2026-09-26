@@ -134,6 +134,16 @@ describe('createViewUrlCache', () => {
     expect(await noTtl.cache.get(['a'])).toHaveProperty('a')
     expect(noTtl.cache.nextExpiry()).toBeNull() // no refresh timer to spin on
   })
+
+  it('can report the earliest expiry among just the ids still on screen', async () => {
+    const { cache, advance } = setup({ urls: { '*': 'https://r2/x' }, expiresIn: 600 })
+    await cache.get(['old'])
+    advance(100_000)
+    await cache.get(['new'])
+    expect(cache.nextExpiry()).toBe(1_000_000 + 600_000)
+    expect(cache.nextExpiry(['new'])).toBe(1_100_000 + 600_000)
+    expect(cache.nextExpiry(['never-fetched'])).toBeNull()
+  })
 })
 
 describe('loadRoll', () => {

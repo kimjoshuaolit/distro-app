@@ -10,6 +10,8 @@ type Props = {
   onIndex: (index: number) => void
   onClose: () => void
   onMediaError: (id: string) => void
+  /** Optional: the shown shot's media loaded (the couple view pins that URL). */
+  onMediaLoad?: (id: string) => void
 }
 
 const SWIPE_PX = 50
@@ -18,7 +20,7 @@ const SWIPE_PX = 50
  * Full-frame view of one shot, with prev/next through the roll. Read-only.
  * The parent makes the page behind it inert and owns focus restoration.
  */
-export default function RollViewer({ items, index, total, onIndex, onClose, onMediaError }: Props) {
+export default function RollViewer({ items, index, total, onIndex, onClose, onMediaError, onMediaLoad }: Props) {
   const closeRef = useRef<HTMLButtonElement>(null)
   const swipeStart = useRef<number | null>(null)
   const swiped = useRef(false)
@@ -93,6 +95,7 @@ export default function RollViewer({ items, index, total, onIndex, onClose, onMe
             capturedAt={item.capturedAt}
             label={label}
             onError={() => onMediaError(item.id)}
+            onLoaded={onMediaLoad ? () => onMediaLoad(item.id) : undefined}
           />
         ) : (
           <img
@@ -102,6 +105,7 @@ export default function RollViewer({ items, index, total, onIndex, onClose, onMe
             alt={label}
             draggable={false}
             onError={() => onMediaError(item.id)}
+            onLoad={onMediaLoad ? () => onMediaLoad(item.id) : undefined}
           />
         )}
       </div>

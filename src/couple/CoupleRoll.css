@@ -1,0 +1,138 @@
+/* One guest's roll (2.2): a contact sheet of small cream prints on the warm
+   reveal stage, numbered in capture order. */
+.couple-roll {
+  display: flex;
+  flex-direction: column;
+}
+
+.couple-roll .reveal__title:focus {
+  outline: none;
+}
+
+.couple-roll .reveal__title:focus-visible {
+  outline: 3px solid var(--reveal-accent);
+  outline-offset: 4px;
+}
+
+.couple-roll__nav {
+  margin-bottom: var(--space-4);
+}
+
+.couple-roll__back {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 44px;
+  padding: 0 var(--space-4);
+  border: 2px solid var(--hairline);
+  border-radius: var(--radius-pill);
+  font-family: var(--font-body);
+  font-size: var(--text-body);
+  font-weight: 700;
+  color: var(--reveal-surface);
+  text-decoration: none;
+}
+
+.couple-roll__back:hover {
+  filter: brightness(1.08);
+}
+
+.couple-roll__back:focus-visible {
+  outline: 3px solid var(--reveal-accent);
+  outline-offset: 3px;
+}
+
+.couple-roll__meta {
+  margin: var(--space-2) 0 0;
+  font-size: var(--text-body);
+  color: var(--hairline);
+}
+
+.couple-roll__sheet {
+  list-style: none;
+  margin: var(--space-6) 0 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.tile {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  width: 100%;
+  min-height: 44px;
+  padding: var(--space-1);
+  border: none;
+  border-radius: 2px;
+  background: var(--reveal-surface);
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.tile--blank {
+  cursor: default;
+}
+
+.tile:focus-visible {
+  outline: 3px solid var(--reveal-accent);
+  outline-offset: 3px;
+}
+
+.tile__media {
+  position: relative;
+  display: block;
+  aspect-ratio: 3 / 4;
+  overflow: hidden;
+  background: var(--viewfinder-bg);
+}
+
+.tile__media img,
+.tile__media video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* No link yet, a link that failed (until it's re-signed), or unavailable:
+   an undeveloped frame. */
+.tile--blank .tile__media {
+  background:
+    linear-gradient(160deg, rgba(196, 98, 45, 0.25), transparent 60%),
+    var(--viewfinder-bg);
+}
+
+.tile__play {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--reveal-accent);
+  font-size: 1.4rem;
+  text-shadow: 0 0 8px rgba(26, 18, 12, 0.9);
+}
+
+.tile__no {
+  font-family: var(--font-stamp);
+  font-size: var(--text-body);
+  line-height: 1.2;
+  color: var(--ink);
+}
+
+@media (min-width: 640px) {
+  .couple-roll__sheet {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: var(--space-4);
+  }
+}
+
+@media (min-width: 960px) {
+  .couple-roll__sheet {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+}

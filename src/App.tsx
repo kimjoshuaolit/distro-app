@@ -16,8 +16,13 @@ export default function App() {
       <Route path="/j/:eventToken" element={<Join />} />
       <Route path="/c/:eventToken" element={<Camera />} />
       <Route path="/r/:eventToken" element={<Roll />} />
-      {/* The couple's reveal (Epic 2): magic-link sign-in, event-scoped by RLS. */}
-      <Route path="/reveal/:eventId" element={<Reveal />} />
+      {/* The couple's reveal (Epic 2): magic-link sign-in, event-scoped by RLS.
+          The shelf and each guest's roll share one Reveal (same gate, one
+          collection load); the child routes only select what it shows. */}
+      <Route path="/reveal/:eventId" element={<Reveal />}>
+        <Route index element={null} />
+        <Route path="roll/:guestId" element={null} />
+      </Route>
       {/* Catch-all: unknown deep links fall back to the shell instead of a blank page. */}
       <Route path="*" element={<Placeholder />} />
     </Routes>

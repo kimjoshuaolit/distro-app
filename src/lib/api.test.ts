@@ -4,19 +4,24 @@ const rpc = vi.fn()
 const invoke = vi.fn()
 
 // A chainable postgrest-style query recorder: every builder call is logged and
-// the awaited result is whatever `queryResult` holds.
+// the awaited result is `queryResponder(calls of this query)` when set, else
+// whatever `queryResult` holds.
+type QueryResult = { data: unknown; error: unknown }
 const queryCalls: Array<[string, unknown[]]> = []
-let queryResult: { data: unknown; error: unknown } = { data: [], error: null }
+let queryResult: QueryResult = { data: [], error: null }
+let queryResponder: ((calls: Array<[string, unknown[]]>) => QueryResult) | null = null
 const from = vi.fn((table: string) => {
+  const own: Array<[string, unknown[]]> = [['from', [table]]]
   queryCalls.push(['from', [table]])
   const builder: Record<string, unknown> = {}
-  for (const m of ['select', 'eq', 'order', 'setHeader', 'abortSignal']) {
+  for (const m of ['select', 'eq', 'in', 'order', 'range', 'setHeader', 'abortSignal']) {
     builder[m] = (...args: unknown[]) => {
       queryCalls.push([m, args])
+      own.push([m, args])
       return builder
     }
   }
-  builder.then = (resolve: (v: unknown) => unknown) => resolve(queryResult)
+  builder.then = (resolve: (v: unknown) => unknown) => resolve(queryResponder ? queryResponder(own) : queryResult)
   return builder
 })
 
@@ -38,6 +43,10 @@ const {
   putTimeoutMs,
   getServerRoll,
   issueViewUrls,
+  getCollection,
+  issueCoupleViewUrls,
+  COLLECTION_PAGE_SIZE,
+  COLLECTION_GUEST_CHUNK,
 } = await import('./api.ts')
 
 const OPEN_ID = '00000000-0000-0000-0000-000000000001'
@@ -45,6 +54,7 @@ const OPEN_ID = '00000000-0000-0000-0000-000000000001'
 beforeEach(() => {
   rpc.mockReset()
   invoke.mockReset()
+  queryResponder = null
 })
 
 describe('getEventStatus', () => {
@@ -271,6 +281,144 @@ describe('issueViewUrls', () => {
   it('throws on a function error', async () => {
     invoke.mockResolvedValue(typedError('guest_not_found'))
     await expect(issueViewUrls('tok', ['a'])).rejects.toThrow()
+  })
+})
+
+describe('getCollection', () => {
+  const EVENT = '00000000-0000-0000-0000-0000000000e1'
+  const guestId = (n: number) => `g${String(n).padStart(4, '0')}`
+  const arg = (calls: Array<[string, unknown[]]>, m: string) => calls.find(([name]) => name === m)?.[1]
+
+  // Serve `guests` and `shots` tables from arrays, honoring eq/in/range like PostgREST.
+  function serve(guests: Array<Record<string, unknown>>, shots: Array<Record<string, unknown>>) {
+    queryResponder = (calls) => {
+      const table = arg(calls, 'from')?.[0]
+      let rows = table === 'guests' ? guests : shots
+      for (const [m, args] of calls) {
+        if (m === 'eq') rows = rows.filter((r) => r[args[0] as string] === args[1])
+        if (m === 'in') rows = rows.filter((r) => (args[1] as unknown[]).includes(r[args[0] as string]))
+      }
+      const [lo, hi] = (arg(calls, 'range') ?? [0, rows.length]) as [number, number]
+      return { data: rows.slice(lo, hi + 1), error: null }
+    }
+  }
+
+  beforeEach(() => {
+    queryCalls.length = 0
+    queryResult = { data: [], error: null }
+    queryResponder = null
+  })
+
+  it('reads the event\'s guests, then only their uploaded shots — metadata, never keys', async () => {
+    serve(
+      [
+        { id: 'g1', event_id: EVENT, first_name: 'Rosa', created_at: '2026-09-19T10:00:00+00:00' },
+        { id: 'g9', event_id: 'other-event', first_name: 'Uma', created_at: null },
+      ],
+      [
+        { id: 's1', guest_id: 'g1', type: 'photo', captured_at: '2026-09-19T12:00:00+00:00', upload_status: 'uploaded' },
+        { id: 's2', guest_id: 'g1', type: 'clip', captured_at: null, upload_status: 'local' },
+        // Visible through RLS for another reason (e.g. another event), not this event's guest.
+        { id: 's9', guest_id: 'g9', type: 'photo', captured_at: null, upload_status: 'uploaded' },
+      ],
+    )
+    await expect(getCollection(EVENT)).resolves.toEqual({
+      guests: [{ id: 'g1', firstName: 'Rosa', createdAt: '2026-09-19T10:00:00+00:00' }],
+      shots: [{ id: 's1', guestId: 'g1', type: 'photo', capturedAt: '2026-09-19T12:00:00+00:00' }],
+    })
+
+    expect(queryCalls).toContainEqual(['eq', ['event_id', EVENT]])
+    expect(queryCalls).toContainEqual(['eq', ['upload_status', 'uploaded']])
+    expect(queryCalls).toContainEqual(['in', ['guest_id', ['g1']]])
+    const selects = queryCalls.filter(([m]) => m === 'select').map(([, a]) => a[0] as string)
+    expect(selects.join(' ')).not.toMatch(/r2_key|device_token|remaining/)
+    expect(queryCalls.filter(([m]) => m === 'abortSignal').every(([, a]) => a[0] instanceof AbortSignal)).toBe(true)
+  })
+
+  it('does not read shots at all when the event has no guests', async () => {
+    serve([], [])
+    await expect(getCollection(EVENT)).resolves.toEqual({ guests: [], shots: [] })
+    expect(queryCalls).not.toContainEqual(['from', ['shots']])
+  })
+
+  it('pages past max_rows until a short page, so large events load whole', async () => {
+    const shots = Array.from({ length: COLLECTION_PAGE_SIZE * 2 + 5 }, (_, i) => ({
+      id: `s${String(i).padStart(5, '0')}`,
+      guest_id: 'g1',
+      type: 'photo',
+      captured_at: null,
+      upload_status: 'uploaded',
+    }))
+    serve([{ id: 'g1', event_id: EVENT, first_name: 'Rosa', created_at: null }], shots)
+
+    const { shots: got } = await getCollection(EVENT)
+    expect(got).toHaveLength(COLLECTION_PAGE_SIZE * 2 + 5)
+    expect(new Set(got.map((s) => s.id)).size).toBe(got.length)
+    const ranges = queryCalls.filter(([m]) => m === 'range').map(([, a]) => a)
+    // guests: one page; shots: three pages.
+    expect(ranges).toEqual([
+      [0, COLLECTION_PAGE_SIZE - 1],
+      [0, COLLECTION_PAGE_SIZE - 1],
+      [COLLECTION_PAGE_SIZE, COLLECTION_PAGE_SIZE * 2 - 1],
+      [COLLECTION_PAGE_SIZE * 2, COLLECTION_PAGE_SIZE * 3 - 1],
+    ])
+    // Stable pages: ordered by a unique column.
+    expect(queryCalls).toContainEqual(['order', ['id', { ascending: true }]])
+  })
+
+  it('filters shots in chunks of guest ids so the URL stays short', async () => {
+    const guests = Array.from({ length: COLLECTION_GUEST_CHUNK + 1 }, (_, i) => ({
+      id: guestId(i),
+      event_id: EVENT,
+      first_name: `G${i}`,
+      created_at: null,
+    }))
+    const shots = guests.map((g, i) => ({ id: `s${i}`, guest_id: g.id, type: 'photo', captured_at: null, upload_status: 'uploaded' }))
+    serve(guests, shots)
+
+    const { shots: got } = await getCollection(EVENT)
+    expect(got).toHaveLength(COLLECTION_GUEST_CHUNK + 1)
+    const ins = queryCalls.filter(([m]) => m === 'in').map(([, a]) => (a[1] as string[]).length)
+    expect(ins).toEqual([COLLECTION_GUEST_CHUNK, 1])
+  })
+
+  it('throws when any read fails (the screen offers a retry, never a blank shelf)', async () => {
+    queryResponder = (calls) =>
+      arg(calls, 'from')?.[0] === 'shots'
+        ? { data: null, error: { message: 'offline' } }
+        : { data: [{ id: 'g1', first_name: 'Rosa', created_at: null }], error: null }
+    await expect(getCollection(EVENT)).rejects.toThrow()
+
+    queryResponder = () => ({ data: null, error: { message: 'offline' } })
+    await expect(getCollection(EVENT)).rejects.toThrow()
+  })
+})
+
+describe('issueCoupleViewUrls', () => {
+  it('asks for URLs for the event\'s shot ids with a timeout and returns the map', async () => {
+    invoke.mockResolvedValue({ data: { urls: { s1: 'https://r2/s1' }, expiresIn: 600 }, error: null })
+    await expect(issueCoupleViewUrls('ev', ['s1', 's2'])).resolves.toEqual({
+      urls: { s1: 'https://r2/s1' },
+      expiresIn: 600,
+    })
+    const [name, opts] = invoke.mock.calls[0]
+    expect(name).toBe('issue-couple-view-urls')
+    expect(opts.body).toEqual({ eventId: 'ev', shotIds: ['s1', 's2'] })
+    expect(opts.timeout).toBeGreaterThan(0)
+  })
+
+  it('throws on a 403 (not this event\'s couple) or a 400', async () => {
+    invoke.mockResolvedValue(typedError('not_couple', 'This reveal belongs to another couple.'))
+    await expect(issueCoupleViewUrls('ev', ['s1'])).rejects.toThrow('This reveal belongs to another couple.')
+    invoke.mockResolvedValue(typedError('bad_request'))
+    await expect(issueCoupleViewUrls('ev', ['s1'])).rejects.toThrow()
+  })
+
+  it('throws on a transport failure, and treats a missing lifetime as uncacheable', async () => {
+    invoke.mockResolvedValue({ data: null, error: { message: 'timeout' } })
+    await expect(issueCoupleViewUrls('ev', ['s1'])).rejects.toThrow()
+    invoke.mockResolvedValue({ data: { urls: {} }, error: null })
+    await expect(issueCoupleViewUrls('ev', ['s1'])).resolves.toEqual({ urls: {}, expiresIn: 0 })
   })
 })
 

@@ -205,3 +205,25 @@
     max-width: 640px;
   }
 }
+
+/* Signed in (2.2): the collection starts at the top and gets room to spread —
+   a wider grid of prints on a laptop. */
+.reveal--wide {
+  align-items: flex-start;
+  padding-top: var(--space-8);
+}
+
+.reveal--wide .reveal__stage {
+  max-width: 560px;
+}
+
+.reveal--wide .reveal__body,
+.reveal--wide .reveal__notice {
+  max-width: 60ch;
+}
+
+@media (min-width: 768px) {
+  .reveal--wide .reveal__stage {
+    max-width: 1080px;
+  }
+}

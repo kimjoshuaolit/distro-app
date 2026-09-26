@@ -1,9 +1,11 @@
 import { describe, it, expect } from 'vitest'
 import {
   validateViewRequest,
+  validateCoupleViewRequest,
   MAX_VIEW_IDS,
   VIEW_TTL_SECONDS,
   toViewUrlMap,
+  toCoupleViewUrlMap,
   withExpiry,
 } from './view-rules.ts'
 
@@ -93,5 +95,91 @@ describe('validateViewRequest', () => {
     expect(validateViewRequest({ clientShotIds: [id(1)] }).ok).toBe(false)
     expect(validateViewRequest(null).ok).toBe(false)
     expect(validateViewRequest('x').ok).toBe(false)
+  })
+})
+
+describe('toCoupleViewUrlMap', () => {
+  it('keys signed URLs by shot id (shots.id), signing the r2 key', async () => {
+    const map = await toCoupleViewUrlMap(
+      [
+        { shot_id: id(1), r2_key: 'events/e/g/1.jpg' },
+        { shot_id: id(2), r2_key: 'events/e/g/2.mp4' },
+      ],
+      async (key) => `signed:${key}`,
+    )
+    expect(map).toEqual({ [id(1)]: 'signed:events/e/g/1.jpg', [id(2)]: 'signed:events/e/g/2.mp4' })
+  })
+
+  it('omits rows that fail to sign and reports them by shot id, never by key', async () => {
+    const sign = async (key: string) => {
+      if (key === 'bad') throw new Error('sign failed')
+      return `signed:${key}`
+    }
+    const failures: Array<[string, unknown]> = []
+    const map = await toCoupleViewUrlMap(
+      [
+        { shot_id: id(1), r2_key: 'ok' },
+        { shot_id: id(2), r2_key: 'bad' },
+        { shot_id: id(3), r2_key: 'also-ok' },
+      ],
+      sign,
+      (shotId, err) => failures.push([shotId, err]),
+    )
+    expect(map).toEqual({ [id(1)]: 'signed:ok', [id(3)]: 'signed:also-ok' })
+    expect(failures.map(([shotId]) => shotId)).toEqual([id(2)])
+  })
+
+  it('is empty (not a throw) when every row fails, or there are no rows', async () => {
+    const fail = async () => {
+      throw new Error('no creds')
+    }
+    await expect(toCoupleViewUrlMap([{ shot_id: id(1), r2_key: 'k' }], fail)).resolves.toEqual({})
+    await expect(toCoupleViewUrlMap([], fail)).resolves.toEqual({})
+  })
+})
+
+describe('validateCoupleViewRequest', () => {
+  const EVENT = 'e0000000-0000-4000-8000-000000000001'
+
+  it('accepts an event uuid and 1..30 shot uuids', () => {
+    expect(validateCoupleViewRequest({ eventId: EVENT, shotIds: [id(1)] })).toEqual({
+      ok: true,
+      value: { eventId: EVENT, shotIds: [id(1)] },
+    })
+    const full = Array.from({ length: MAX_VIEW_IDS }, (_, i) => id(i))
+    expect(validateCoupleViewRequest({ eventId: EVENT, shotIds: full }).ok).toBe(true)
+  })
+
+  it('lowercases ids so they match the keys Postgres returns', () => {
+    const upper = 'ABCDEF00-0000-4000-8000-00000000000A'
+    const res = validateCoupleViewRequest({ eventId: EVENT.toUpperCase(), shotIds: [upper] })
+    expect(res).toEqual({ ok: true, value: { eventId: EVENT, shotIds: [upper.toLowerCase()] } })
+  })
+
+  it('rejects more than 30 ids, none, or a non-array', () => {
+    const tooMany = Array.from({ length: MAX_VIEW_IDS + 1 }, (_, i) => id(i))
+    expect(validateCoupleViewRequest({ eventId: EVENT, shotIds: tooMany }).ok).toBe(false)
+    expect(validateCoupleViewRequest({ eventId: EVENT, shotIds: [] }).ok).toBe(false)
+    expect(validateCoupleViewRequest({ eventId: EVENT, shotIds: id(1) }).ok).toBe(false)
+    expect(validateCoupleViewRequest({ eventId: EVENT }).ok).toBe(false)
+  })
+
+  it('rejects non-uuid shot ids (client shot ids are not accepted either way)', () => {
+    expect(validateCoupleViewRequest({ eventId: EVENT, shotIds: [id(1), 'rosa-1'] }).ok).toBe(false)
+    expect(validateCoupleViewRequest({ eventId: EVENT, shotIds: [42] }).ok).toBe(false)
+  })
+
+  it('rejects repeated ids, in any case', () => {
+    expect(validateCoupleViewRequest({ eventId: EVENT, shotIds: [id(1), id(1)] }).ok).toBe(false)
+    const upper = 'ABCDEF00-0000-4000-8000-00000000000A'
+    expect(validateCoupleViewRequest({ eventId: EVENT, shotIds: [upper, upper.toLowerCase()] }).ok).toBe(false)
+  })
+
+  it('rejects a missing or malformed event id and non-object bodies', () => {
+    expect(validateCoupleViewRequest({ shotIds: [id(1)] }).ok).toBe(false)
+    expect(validateCoupleViewRequest({ eventId: 'event-1', shotIds: [id(1)] }).ok).toBe(false)
+    expect(validateCoupleViewRequest(null).ok).toBe(false)
+    expect(validateCoupleViewRequest([EVENT]).ok).toBe(false)
+    expect(validateCoupleViewRequest('x').ok).toBe(false)
   })
 })
