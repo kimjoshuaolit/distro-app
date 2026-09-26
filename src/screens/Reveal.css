@@ -182,7 +182,7 @@
   margin-top: var(--space-6);
 }
 
-/* The granted shell: a letterboxed "stage" waiting for its montage (2.3). */
+/* A gentle, letterboxed "not yet" note (e.g. the rolls are still developing). */
 .reveal__prepared {
   margin-top: var(--space-6);
   padding: var(--space-8) var(--space-6);

@@ -27,4 +27,11 @@ export default tseslint.config([
       ],
     },
   },
+  {
+    // Operator scripts run on Node (never bundled into the app).
+    files: ['scripts/**/*.ts'],
+    languageOptions: {
+      globals: globals.node,
+    },
+  },
 ])

@@ -335,6 +335,45 @@ export async function issueCoupleViewUrls(eventId: string, shotIds: string[]): P
   }
 }
 
+export class MontageError extends Error {
+  code: string
+  constructor(code: string, message: string) {
+    super(message)
+    this.name = 'MontageError'
+    this.code = code
+  }
+}
+
+/** The event's hosted montage: a signed link, or `url: null` while it's still being prepared. */
+export type MontageUrl = { url: string | null; expiresIn: number }
+
+/**
+ * A short-lived signed URL for the event's hosted montage (2.3, AD-2 couple
+ * tier). The session JWT rides along; the function checks it can read
+ * `eventId` through RLS before signing. `url: null` means no montage has been
+ * hosted yet — not an error. Throws `MontageError` with the server's code
+ * (`not_couple`, `bad_request`, `server_error`) on any failure, including a
+ * timeout or a malformed response.
+ */
+export async function getMontageUrl(eventId: string): Promise<MontageUrl> {
+  const { data, error } = await supabase.functions.invoke('issue-montage-url', {
+    body: { eventId },
+    timeout: FUNCTION_TIMEOUT_MS,
+  })
+  if (error) {
+    const { code, message } = await parseFunctionError(error)
+    throw new MontageError(code, message)
+  }
+  if (!data || typeof data !== 'object' || !('url' in data)) {
+    throw new MontageError('server_error', 'Empty response from the server.')
+  }
+  if (data.url === null) return { url: null, expiresIn: 0 }
+  if (typeof data.url !== 'string' || data.url === '') {
+    throw new MontageError('server_error', 'Unexpected response from the server.')
+  }
+  return { url: data.url, expiresIn: typeof data.expiresIn === 'number' ? data.expiresIn : 0 }
+}
+
 /** Mark the shot uploaded server-side after a successful PUT. Idempotent. */
 export async function confirmUpload(deviceToken: string, clientShotId: string): Promise<void> {
   const { error } = await supabase.functions.invoke('confirm-upload', {

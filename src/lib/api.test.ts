@@ -45,6 +45,8 @@ const {
   issueViewUrls,
   getCollection,
   issueCoupleViewUrls,
+  getMontageUrl,
+  MontageError,
   COLLECTION_PAGE_SIZE,
   COLLECTION_GUEST_CHUNK,
 } = await import('./api.ts')
@@ -419,6 +421,48 @@ describe('issueCoupleViewUrls', () => {
     await expect(issueCoupleViewUrls('ev', ['s1'])).rejects.toThrow()
     invoke.mockResolvedValue({ data: { urls: {} }, error: null })
     await expect(issueCoupleViewUrls('ev', ['s1'])).resolves.toEqual({ urls: {}, expiresIn: 0 })
+  })
+})
+
+describe('getMontageUrl', () => {
+  it('asks issue-montage-url for the event with a timeout and returns the signed link', async () => {
+    invoke.mockResolvedValue({ data: { url: 'https://r2/m.mp4?sig', expiresIn: 3600 }, error: null })
+    await expect(getMontageUrl('ev')).resolves.toEqual({ url: 'https://r2/m.mp4?sig', expiresIn: 3600 })
+    const [name, opts] = invoke.mock.calls[0]
+    expect(name).toBe('issue-montage-url')
+    expect(opts.body).toEqual({ eventId: 'ev' })
+    expect(opts.timeout).toBeGreaterThan(0)
+  })
+
+  it('no montage hosted yet is `url: null`, not an error', async () => {
+    invoke.mockResolvedValue({ data: { url: null }, error: null })
+    await expect(getMontageUrl('ev')).resolves.toEqual({ url: null, expiresIn: 0 })
+  })
+
+  it('throws a typed MontageError carrying the server code (403 / 400 / 500)', async () => {
+    invoke.mockResolvedValue(typedError('not_couple', 'This reveal belongs to another couple.'))
+    const err = await getMontageUrl('ev').catch((e: unknown) => e)
+    expect(err).toBeInstanceOf(MontageError)
+    expect(err).toMatchObject({ code: 'not_couple', message: 'This reveal belongs to another couple.' })
+    invoke.mockResolvedValue(typedError('bad_request'))
+    await expect(getMontageUrl('ev')).rejects.toMatchObject({ name: 'MontageError', code: 'bad_request' })
+  })
+
+  it('a transport failure or timeout is a server_error', async () => {
+    invoke.mockResolvedValue({ data: null, error: { message: 'timeout' } })
+    await expect(getMontageUrl('ev')).rejects.toMatchObject({ name: 'MontageError', code: 'server_error' })
+  })
+
+  it('a malformed response is a server_error, never a silent "not prepared"', async () => {
+    for (const data of [null, {}, { url: 42 }, { url: '' }, 'x']) {
+      invoke.mockResolvedValue({ data, error: null })
+      await expect(getMontageUrl('ev'), JSON.stringify(data)).rejects.toMatchObject({ code: 'server_error' })
+    }
+  })
+
+  it('treats a missing lifetime as 0', async () => {
+    invoke.mockResolvedValue({ data: { url: 'https://r2/m.mp4' }, error: null })
+    await expect(getMontageUrl('ev')).resolves.toEqual({ url: 'https://r2/m.mp4', expiresIn: 0 })
   })
 })
 

@@ -75,6 +75,32 @@ npx supabase functions deploy join-event
 
 Then set the hosted project's URL + anon key as the app's production env vars.
 
+## Hosting the montage (operator only)
+
+The couple's reveal plays one finished montage that you cut in your own editor.
+The app never edits video (AD-7), and the couple never uploads it; it's their
+surprise. When the cut is ready:
+
+```bash
+npm run montage:upload -- <eventId> <file.mp4|.mov|.webm>        # local stack
+npm run montage:upload:prod -- <eventId> <file.mp4|.mov|.webm>   # production
+```
+
+The script uploads the file under a fresh key, then points the event at it.
+If anything fails, the current montage is left untouched. Running it again
+replaces the montage; the old file is kept.
+
+It reads server credentials from a gitignored env file, never from the app:
+`supabase/functions/.env` (local) or `supabase/functions/.env.production`
+(prod). Each needs these variables:
+
+- `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`
+- `R2_ENDPOINT`, `R2_BUCKET`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` and `R2_REGION`
+
+See `supabase/functions/.env.example`. Locally, `R2_ENDPOINT` must be the
+host address `http://127.0.0.1:54321/storage/v1/s3`, not `host.docker.internal`.
+The couple's `/reveal/<eventId>` link uses the same `eventId`.
+
 ## Deploy to Cloudflare Pages
 
 The app is a static SPA. To publish it (needs your Cloudflare account):

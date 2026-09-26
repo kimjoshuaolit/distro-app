@@ -14,6 +14,7 @@ import type { GateView } from '../couple/coupleGate.ts'
 import { useCollection } from '../couple/useCollection.ts'
 import RollShelf from '../couple/RollShelf.tsx'
 import CoupleRoll from '../couple/CoupleRoll.tsx'
+import MontageStage from '../couple/MontageStage.tsx'
 import './Reveal.css'
 
 const LINK_ERROR_COPY: Record<LinkError, string> = {
@@ -186,9 +187,10 @@ function LoginForm({
 }
 
 /**
- * The signed-in view (2.2): the roll shelf at /reveal/:eventId, or one guest's
- * roll at /reveal/:eventId/roll/:guestId. The collection loads once for both,
- * so moving between them never refetches it.
+ * The signed-in view: at /reveal/:eventId the montage stage (2.3) with the
+ * roll shelf (2.2) beneath it — never locked behind it — or one guest's roll
+ * at /reveal/:eventId/roll/:guestId. The collection loads once for both, so
+ * moving between them never refetches it.
  */
 function Collection({
   eventId,
@@ -224,6 +226,8 @@ function Collection({
     <>
       <Kicker />
       <h1 className="reveal__title">From your people</h1>
+
+      <MontageStage eventId={eventId} />
 
       {status === 'loading' && <p className="reveal__body">Developing your guests’ rolls…</p>}
 
@@ -272,8 +276,9 @@ function Collection({
 /**
  * C1 Reveal at /reveal/:eventId (Story 2.1): the couple signs in with a magic
  * link; the database decides whether this session may see this event. Signed
- * in, it shows the couple's collection (2.2): the roll shelf, and each guest's
- * roll at /reveal/:eventId/roll/:guestId, under the same gate.
+ * in, it opens on the montage stage (2.3) above the couple's collection (2.2):
+ * the roll shelf, and each guest's roll at /reveal/:eventId/roll/:guestId,
+ * under the same gate.
  */
 export default function Reveal() {
   const { eventId = '', guestId = null } = useParams()

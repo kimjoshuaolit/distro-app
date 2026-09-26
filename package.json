@@ -12,7 +12,9 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:db": "supabase test db"
+    "test:db": "supabase test db",
+    "montage:upload": "node --env-file-if-exists=supabase/functions/.env scripts/upload-montage.ts",
+    "montage:upload:prod": "node --env-file-if-exists=supabase/functions/.env.production scripts/upload-montage.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.113.0",
@@ -22,9 +24,11 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@types/node": "^24.19.0",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
     "@vitejs/plugin-react": "^6.1.0",
+    "aws4fetch": "^1.0.20",
     "eslint": "^10.11.0",
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.7",

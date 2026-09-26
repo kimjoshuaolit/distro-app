@@ -69,3 +69,7 @@ Surfaced during builds; revisit deliberately. Append-only.
 - source_spec: `spec-2-1-couple-secure-login.md`
   summary: Decide whether the couple's read access should wait for the reveal (e.g. only after `window_close` or an operator "delivered" flag), so the couple can't peek at guests' shots through the API during the wedding.
   evidence: Story 2.1's couple policies grant their event's rows as soon as they sign in; the product frames delivery as "days later, the wait is part of the ritual", but no story defines a delivery gate. A product call, not a defect.
+
+- source_spec: `spec-2-3-montage-first-reveal.md`
+  summary: If the reveal sits open for more than an hour before Play, the first tap spends the one-shot re-sign, and the couple may have to tap Play a second time.
+  evidence: The review noted it as low severity. A fresh signed URL could be fetched on Play when the current one is near expiry, instead of relying on the error path.

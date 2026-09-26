@@ -1,0 +1,159 @@
+/* The montage stage (2.3, C1): a softened, letterboxed screen on the warm
+   reveal skin — deep brown, a faint gold edge, cream Play. Quiet, no gloss. */
+.montage {
+  margin-top: var(--space-6);
+}
+
+.montage__stage {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--reveal-accent) 25%, transparent);
+  border-radius: var(--radius-md);
+  background: linear-gradient(160deg, color-mix(in srgb, var(--amber) 18%, var(--reveal-bg)), var(--reveal-bg));
+}
+
+/* The cinematic letterbox bars, top and bottom. */
+.montage__bar {
+  flex: none;
+  height: 14px;
+  background: rgba(0, 0, 0, 0.6);
+}
+
+/* A 16:9 screen by default; text states may grow it (aspect-ratio is a
+   preferred size, so content is never clipped at phone width). */
+.montage__screen {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 16 / 9;
+  min-width: 0;
+}
+
+/* Any aspect ratio letterboxes (or pillarboxes) inside the screen. */
+.montage__video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: #000;
+}
+
+/* Idle: the (unloaded) video stays hidden under the stage until Play. */
+.montage__stage--ready .montage__video {
+  visibility: hidden;
+}
+
+.montage__video:focus-visible {
+  outline: 3px solid var(--reveal-accent);
+  outline-offset: -3px;
+}
+
+.montage__overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.montage__play {
+  width: 88px;
+  height: 88px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--reveal-surface) 95%, transparent);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  cursor: pointer;
+  transition: transform 160ms ease;
+}
+
+.montage__play:hover {
+  transform: scale(1.04);
+}
+
+.montage__play:focus-visible {
+  outline: 3px solid var(--reveal-accent);
+  outline-offset: 4px;
+}
+
+/* A plain triangle, nudged right so it reads optically centred. */
+.montage__play-icon {
+  width: 0;
+  height: 0;
+  margin-left: 7px;
+  border-left: 28px solid var(--reveal-bg);
+  border-top: 17px solid transparent;
+  border-bottom: 17px solid transparent;
+}
+
+.montage__quiet {
+  margin: 0;
+  padding: var(--space-4);
+  font-size: var(--text-body);
+  color: var(--hairline);
+  text-align: center;
+}
+
+.montage__note {
+  position: absolute;
+  top: var(--space-3);
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: calc(100% - var(--space-6));
+  margin: 0;
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-pill);
+  background: rgba(0, 0, 0, 0.7);
+  font-size: var(--text-body);
+  color: var(--reveal-surface);
+  text-align: center;
+}
+
+.montage__message {
+  max-width: 44ch;
+  padding: var(--space-6) var(--space-4);
+  text-align: center;
+}
+
+.montage__message-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-h1);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--reveal-accent);
+}
+
+.montage__message-body {
+  margin: var(--space-3) 0 0;
+  font-size: var(--text-body);
+  line-height: 1.5;
+  color: var(--reveal-surface);
+}
+
+/* Beats .reveal__primary--inline's margin whatever order the sheets load in. */
+.montage__message .montage__retry {
+  margin-top: var(--space-4);
+}
+
+.montage__caption {
+  margin: var(--space-3) 0 0;
+  font-size: var(--text-body);
+  font-style: italic;
+  text-align: center;
+  color: var(--hairline);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .montage__play {
+    transition: none;
+  }
+}
