@@ -15,6 +15,24 @@
             <tr>
               <td style="padding:32px 28px;font-family:Arial,Helvetica,sans-serif;color:#2b2a26;">
                 <!-- Darkened amber: 5.6:1 on cream (the #c4622d token is only 3.7:1). -->
+                <!-- Operator sign-ins (Story 3.1) redirect to <site>/operator; that only picks the wording, never access. -->
+                {{ if eq .RedirectTo (printf "%s/operator" .SiteURL) }}
+                <p style="margin:0 0 8px;font-size:14px;letter-spacing:0.12em;text-transform:uppercase;color:#9a4a1f;font-weight:bold;">
+                  dispo-retro-cam &middot; operator
+                </p>
+                <h1 style="margin:0 0 16px;font-size:28px;line-height:1.15;color:#20130c;">
+                  Sign in to the console
+                </h1>
+                <p style="margin:0 0 24px;font-size:16px;line-height:1.5;">
+                  Here's your one-time link to the operator console. No password.
+                </p>
+                <p style="margin:0 0 16px;">
+                  <a href="{{ .ConfirmationURL }}"
+                     style="display:inline-block;padding:14px 28px;border-radius:999px;background:#f5c518;color:#20130c;font-size:16px;font-weight:bold;text-decoration:none;">
+                    Open the console
+                  </a>
+                </p>
+                {{ else }}
                 <p style="margin:0 0 8px;font-size:14px;letter-spacing:0.12em;text-transform:uppercase;color:#9a4a1f;font-weight:bold;">
                   Your wedding &middot; developed
                 </p>
@@ -32,6 +50,7 @@
                     Open your reveal
                   </a>
                 </p>
+                {{ end }}
                 <p style="margin:0 0 24px;font-size:14px;line-height:1.5;color:#6b635a;">
                   Button not working? Copy this link into your browser:<br />
                   <a href="{{ .ConfirmationURL }}" style="color:#20130c;word-break:break-all;">{{ .ConfirmationURL }}</a>

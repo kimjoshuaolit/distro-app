@@ -73,3 +73,27 @@ Surfaced during builds; revisit deliberately. Append-only.
 - source_spec: `spec-2-3-montage-first-reveal.md`
   summary: If the reveal sits open for more than an hour before Play, the first tap spends the one-shot re-sign, and the couple may have to tap Play a second time.
   evidence: The review noted it as low severity. A fresh signed URL could be fetched on Play when the current one is near expiry, instead of relying on the error path.
+
+- source_spec: `spec-3-1-operator-login-event-setup.md`
+  summary: Make event creation idempotent (a client-generated id or idempotency key), so retrying after a timed-out create can't make a duplicate event.
+  evidence: The review found that a create which times out on the client after the server has inserted the row, followed by a retry, gives two events. The console can't delete events (that needs an Ask First decision), so a duplicate needs SQL to remove.
+
+- source_spec: `spec-3-1-operator-login-event-setup.md`
+  summary: Add `operator:remove` / `operator:list` scripts; today revoking an operator means raw SQL on production.
+  evidence: The review noted that `operator:add` exists with no counterpart. Low urgency with a single operator.
+
+- source_spec: `spec-3-1-operator-login-event-setup.md`
+  summary: Guard edits to a live or released event, and concurrent edits: warn before moving a window while guests are shooting, and add an `updated_at` check so two tabs don't overwrite each other silently.
+  evidence: `operator_save_event` is last-write-wins with no state checks. The review raised it; Story 3.2's window control is the natural home for it.
+
+- source_spec: `spec-3-1-operator-login-event-setup.md`
+  summary: The auth email subject ("Your wedding reveal — here's your link") is global, so the operator's sign-in email carries couple wording in its subject line (the body is correct).
+  evidence: GoTrue has one subject per template. Branching the subject on `.RedirectTo` like the body should be tried against the hosted project.
+
+- source_spec: `spec-3-1-operator-login-event-setup.md`
+  summary: In the console, handle a gateway 401 on save (expired JWT) and a mid-session `not_operator` by re-running the operator gate or signing out, instead of the generic "check your connection". Also warn before leaving a form with unsaved edits.
+  evidence: `saveEvent` maps any error without the typed body to `server_error`. Rare, since supabase-js refreshes tokens, but the copy misleads when it happens.
+
+- source_spec: `spec-3-1-operator-login-event-setup.md`
+  summary: Add component and hook tests for `useOperatorSession`, `EventForm` and `Operator` once a jsdom + React Testing Library harness exists. They were verified live in the browser for 3.1.
+  evidence: The review found only the pure helpers unit-tested, which matches the existing "hook lifecycle tests need a jsdom + RTL harness" deferral from Story 1.4.

@@ -38,3 +38,13 @@ values
   ('00000000-0000-0000-0000-000000000001', 'partner.two@example.test'),
   ('00000000-0000-0000-0000-000000000002', 'other.couple@example.test')
 on conflict do nothing;
+
+-- Couple names shown in the operator console (Story 3.1).
+update public.events set couple_names = 'Ana & Ben' where id = '00000000-0000-0000-0000-000000000001';
+update public.events set couple_names = 'Cleo & Dan' where id = '00000000-0000-0000-0000-000000000002';
+
+-- The dev operator (Story 3.1): sign in at /operator; the link lands in
+-- Mailpit. Real operators are added per environment with `npm run operator:add`.
+insert into public.operators (email)
+values ('kim.operator@example.test')
+on conflict do nothing;

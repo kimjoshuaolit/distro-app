@@ -75,6 +75,39 @@ npx supabase functions deploy join-event
 
 Then set the hosted project's URL + anon key as the app's production env vars.
 
+## The operator console (operator only)
+
+`/operator` is where you set up events: the couple's names, when the camera
+opens and closes (entered in your local time), and up to two couple emails.
+You sign in with a magic link. Only emails on the operator allow-list count,
+and that list lives in each environment's database, never in this repo.
+Add yourself once per environment:
+
+```bash
+npm run operator:add -- <your-email>        # local stack
+npm run operator:add:prod -- <your-email>   # production
+```
+
+The script reads the same env files as the montage upload below; it only
+needs `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY`. Locally the seed already
+lists `kim.operator@example.test`, and its links land in Mailpit
+(`localhost:54324`). Every save goes through the `save-event` Edge Function.
+
+Going live with the console, on the hosted Supabase project:
+
+1. `npx supabase db push` to apply the migrations, including
+   `0007_operator.sql`.
+2. `npx supabase functions deploy save-event`, along with the other functions.
+3. Under **Auth → URL Configuration**, set the Site URL to the app's origin.
+   Add `<origin>/operator` and `<origin>/reveal/**` to the redirect allow-list.
+   The operator email wording is chosen by matching `<Site URL>/operator`.
+4. Under **Auth → Email Templates**, paste in `supabase/templates/magic_link.html`
+   and `confirmation.html`. The local templates don't sync on their own.
+5. `npm run operator:add:prod -- <your-email>`, then sign in at `<origin>/operator`.
+
+An email that already has an account (for example a couple's) still receives
+a link at `/operator`, but then sees "This console is for the operator".
+
 ## Hosting the montage (operator only)
 
 The couple's reveal plays one finished montage that you cut in your own editor.

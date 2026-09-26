@@ -4,6 +4,7 @@ import Join from './screens/Join.tsx'
 import Camera from './screens/Camera.tsx'
 import Roll from './screens/Roll.tsx'
 import Reveal from './screens/Reveal.tsx'
+import Operator from './screens/Operator.tsx'
 
 // My Roll is bundled eagerly on purpose: it must open offline (there's no
 // service worker to precache a lazy chunk), and a failed chunk fetch would
@@ -22,6 +23,13 @@ export default function App() {
       <Route path="/reveal/:eventId" element={<Reveal />}>
         <Route index element={null} />
         <Route path="roll/:guestId" element={null} />
+      </Route>
+      {/* Kim's operator console (Epic 3): magic-link sign-in; the database
+          decides who the operator is. Child routes only select the view. */}
+      <Route path="/operator" element={<Operator />}>
+        <Route index element={null} />
+        <Route path="events/new" element={null} />
+        <Route path="events/:eventId" element={null} />
       </Route>
       {/* Catch-all: unknown deep links fall back to the shell instead of a blank page. */}
       <Route path="*" element={<Placeholder />} />
