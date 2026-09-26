@@ -5,6 +5,7 @@
 import { supabase } from './supabase'
 import { isEventId, mapOtpError, normalizeEmail, type MagicLinkResult } from './coupleAuth'
 import type { SaveEventRequest } from '../../supabase/functions/_shared/operator-rules.ts'
+import { toGuestRows, type GuestParticipation } from '../operator/participation'
 
 const READ_TIMEOUT_MS = 15_000
 const FUNCTION_TIMEOUT_MS = 20_000
@@ -71,6 +72,17 @@ export async function listEvents(): Promise<EventSummary[]> {
   return (Array.isArray(data) ? (data as EventRow[]) : []).map(toSummary)
 }
 
+/** One event's summary (no couple emails), or null when it doesn't exist (or the id is malformed). */
+export async function getEventSummary(eventId: string): Promise<EventSummary | null> {
+  if (!isEventId(eventId)) return null
+  const { data, error, status } = await supabase
+    .rpc('operator_events', { p_event_id: eventId })
+    .abortSignal(AbortSignal.timeout(READ_TIMEOUT_MS))
+  if (error) throw new OperatorReadError(status ?? 0)
+  const row = Array.isArray(data) ? (data[0] as EventRow | undefined) : undefined
+  return row ? toSummary(row) : null
+}
+
 export type EventDetail = EventSummary & { coupleEmails: string[] }
 
 /** One event plus its couple emails, or null when it doesn't exist (or the id is malformed). */
@@ -88,6 +100,20 @@ export async function getEvent(eventId: string): Promise<EventDetail | null> {
   if (!row) return null
   const list = Array.isArray(emails.data) ? emails.data.filter((e): e is string => typeof e === 'string') : []
   return { ...toSummary(row), coupleEmails: list }
+}
+
+/**
+ * Who has joined one event and roughly how much each has shot (Story 3.3),
+ * newest joiner first. Read through `operator_participation()`, which answers
+ * only for the operator. A malformed id reads as no guests.
+ */
+export async function getParticipation(eventId: string): Promise<GuestParticipation[]> {
+  if (!isEventId(eventId)) return []
+  const { data, error, status } = await supabase
+    .rpc('operator_participation', { p_event_id: eventId })
+    .abortSignal(AbortSignal.timeout(READ_TIMEOUT_MS))
+  if (error) throw new OperatorReadError(status ?? 0)
+  return toGuestRows(data)
 }
 
 export class SaveEventError extends Error {

@@ -113,3 +113,11 @@ Surfaced during builds; revisit deliberately. Append-only.
 - source_spec: `spec-3-2-qr-window-control.md`
   summary: Component tests for `WindowControl` (confirm/cancel, skew, errors), `TableCards` (missing/failed/retry) and the Camera lock wiring once a jsdom + React Testing Library harness exists. Pure logic is covered: the window watcher, window rules, QR payload.
   evidence: Same harness gap as the earlier hook and component deferrals. All three were verified live in the browser for 3.2.
+
+- source_spec: `spec-3-3-participation-dashboard.md`
+  summary: Console-wide, an operator read failing with 401/403 (session expired or revoked) shows "check your connection" or "couldn't refresh" instead of a sign-in prompt. The dashboard's refresher drops `OperatorReadError.status`.
+  evidence: The same pattern exists in the event list, event form and table cards. supabase-js auto-refresh makes it rare while the tab is open. The review raised it. The fix is to route 401/403 from any operator read to the session gate.
+
+- source_spec: `spec-3-3-participation-dashboard.md`
+  summary: Component tests for `Dashboard` (loading, missing, failed, stale and empty screens) and the `useParticipation` visibility/online listeners, once a jsdom + React Testing Library harness exists.
+  evidence: Same harness gap as the earlier component deferrals. The pure refresher, state fold and row mapping are unit-tested, and every screen was verified live in the browser for 3.3.

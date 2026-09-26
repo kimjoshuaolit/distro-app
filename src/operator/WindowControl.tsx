@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { setWindow, WindowError, type WindowTimes } from '../lib/operatorApi'
-import { uploadsUntil, UPLOAD_GRACE_DAYS, windowPhase } from '../../supabase/functions/_shared/window-rules.ts'
+import { UPLOAD_GRACE_DAYS } from '../../supabase/functions/_shared/window-rules.ts'
+import { windowLine } from './windowLine'
 
 const fmt = (iso: string) => new Date(iso).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })
 
@@ -44,9 +45,7 @@ export default function WindowControl({
   }, [])
 
   const now = new Date(clientNow + skewMs)
-  const phase = windowPhase(windowOpen, windowClose, now)
-  const until = uploadsUntil(windowClose)
-  const uploadsOver = until !== null && now.getTime() > Date.parse(until)
+  const { phase, text: line } = windowLine(windowOpen, windowClose, now, fmt)
 
   // A pending "Close the camera?" never outlives the open phase it was asked in.
   if (confirming && phase !== 'open') setConfirming(false)
@@ -73,13 +72,6 @@ export default function WindowControl({
       setBusy(false)
     }
   }
-
-  let line: string
-  if (phase === 'unset') line = 'No window set — the camera isn’t open.'
-  else if (phase === 'scheduled') line = `Not open yet · opens ${fmt(windowOpen!)}`
-  else if (phase === 'open') line = windowClose ? `Open now · closes ${fmt(windowClose)}` : 'Open now · no close time'
-  else if (uploadsOver) line = `Closed ${fmt(windowClose!)} · uploads have closed too`
-  else line = `Closed ${fmt(windowClose!)}${until ? ` · late uploads accepted until ${fmt(until)}` : ''}`
 
   const off = busy || disabled
 

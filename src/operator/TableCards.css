@@ -73,11 +73,6 @@
   font-weight: 700;
 }
 
-.op__code--inline {
-  display: inline;
-  padding: 0 var(--space-1);
-}
-
 /* Below the true-size sheet width (~2 × 90mm + gap, inside the console column) the preview shrinks; print keeps true size. */
 @media screen and (max-width: 760px) {
   .cards__sheet {

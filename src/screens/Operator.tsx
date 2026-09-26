@@ -6,6 +6,7 @@ import { useOperatorSession } from '../operator/useOperatorSession'
 import { formatWindow } from '../operator/localTime'
 import EventForm from '../operator/EventForm'
 import TableCards from '../operator/TableCards'
+import Dashboard from '../operator/Dashboard'
 import './Operator.css'
 
 const LINK_ERROR_COPY: Record<LinkError, string> = {
@@ -187,10 +188,17 @@ function EventList() {
       {state.status === 'ready' && state.events.length > 0 && (
         <ul className="op__list">
           {state.events.map((e) => (
-            <li key={e.id}>
+            <li key={e.id} className="op__event-item">
               <Link className="op__event" to={`/operator/events/${e.id}`}>
                 <span className="op__event-names">{e.coupleNames ?? 'Untitled event'}</span>
                 <span className="op__event-window">{formatWindow(e.windowOpen, e.windowClose)}</span>
+              </Link>
+              <Link
+                className="op__secondary op__event-dash"
+                to={`/operator/events/${e.id}/dashboard`}
+                aria-label={`Dashboard for ${e.coupleNames ?? 'Untitled event'}`}
+              >
+                Dashboard
               </Link>
             </li>
           ))}
@@ -204,13 +212,15 @@ function EventList() {
  * O1 Setup — the operator console (Story 3.1) at /operator: magic-link
  * sign-in; the database decides whether this session is the operator. Then
  * the event list, and create / edit at /operator/events/new and
- * /operator/events/:eventId.
+ * /operator/events/:eventId, table cards at …/cards (3.2), and the O2
+ * participation dashboard at …/dashboard (3.3).
  */
 export default function Operator() {
   const { gate, email, sessionEpoch, retry } = useOperatorSession()
   const { eventId = null } = useParams()
   const isNew = useMatch('/operator/events/new') !== null
   const isCards = useMatch('/operator/events/:eventId/cards') !== null
+  const isDashboard = useMatch('/operator/events/:eventId/dashboard') !== null
   const [status, setStatus] = useState('')
 
   return (
@@ -263,6 +273,8 @@ export default function Operator() {
         <div key={sessionEpoch}>
           {isCards && eventId ? (
             <TableCards eventId={eventId} />
+          ) : isDashboard && eventId ? (
+            <Dashboard eventId={eventId} />
           ) : isNew || eventId ? (
             <EventForm eventId={isNew ? null : eventId} announce={setStatus} />
           ) : (

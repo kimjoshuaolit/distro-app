@@ -208,6 +208,23 @@ body:has(.op) {
   list-style: none;
 }
 
+/* The row link and its Dashboard link sit side by side (never nested). */
+.op__event-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: var(--space-2);
+}
+
+.op__event-item .op__event {
+  flex: 1 1 16rem;
+  min-width: 0;
+}
+
+.op__event-dash {
+  align-self: center;
+}
+
 .op__event {
   display: flex;
   flex-direction: column;
@@ -317,6 +334,11 @@ body:has(.op) {
   font-size: var(--text-small);
   overflow-wrap: anywhere;
   user-select: all;
+}
+
+.op__code--inline {
+  display: inline;
+  padding: 0 var(--space-1);
 }
 
 .op__footer {

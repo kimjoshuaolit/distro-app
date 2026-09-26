@@ -1,0 +1,93 @@
+/* O2 Dashboard (Story 3.3): participation at a glance — same plain console
+   look as Setup, big numbers up top, one quiet card per guest. */
+.dash__totals {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr));
+  gap: var(--space-3);
+  margin: var(--space-6) 0 var(--space-4);
+}
+
+.dash__total {
+  padding: var(--space-3) var(--space-4);
+  border: 2px solid #b9ad94;
+  border-radius: var(--radius-md);
+  background: #fffdf6;
+}
+
+.dash__total dt {
+  font-size: var(--text-small);
+  font-weight: 700;
+  color: #5c554c;
+}
+
+.dash__total dd {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-h1);
+  line-height: 1.1;
+}
+
+.dash__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.dash__updated {
+  margin: 0;
+  color: #5c554c;
+}
+
+.dash__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dash__guest {
+  padding: var(--space-3) var(--space-4);
+  border: 2px solid #d8ccb2;
+  border-radius: var(--radius-md);
+  background: #fffdf6;
+}
+
+.dash__guest p {
+  margin: 0;
+}
+
+.dash__guest-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0 var(--space-3);
+}
+
+.dash__name {
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.dash__joined,
+.dash__last {
+  color: #5c554c;
+}
+
+.dash__counts--none {
+  color: #5c554c;
+  font-style: italic;
+}
+
+.dash__on-way {
+  color: #9a4a1f; /* darkened amber: 5.6:1 on cream */
+  font-weight: 700;
+}
+
+.dash__hint {
+  margin-top: var(--space-6);
+}

@@ -67,6 +67,9 @@ function EventLinks({ eventId }: { eventId: string }) {
         <Link className="op__primary" to={`/operator/events/${eventId}/cards`}>
           Table cards &amp; QR
         </Link>
+        <Link className="op__secondary" to={`/operator/events/${eventId}/dashboard`}>
+          Dashboard
+        </Link>
       </div>
     </section>
   )

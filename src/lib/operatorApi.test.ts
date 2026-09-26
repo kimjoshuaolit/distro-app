@@ -39,6 +39,8 @@ const {
   isOperator,
   listEvents,
   getEvent,
+  getEventSummary,
+  getParticipation,
   saveEvent,
   setWindow,
   SaveEventError,
@@ -143,6 +145,58 @@ describe('getEvent', () => {
     rpcResult.operator_events = { data: [row], error: null }
     rpcResult.operator_couple_emails = { data: null, error: { message: 'x' }, status: 500 }
     await expect(getEvent(EVENT)).rejects.toMatchObject({ name: 'OperatorReadError' })
+  })
+})
+
+describe('getEventSummary', () => {
+  it('reads only operator_events — never the couple emails', async () => {
+    rpcResult.operator_events = { data: [row], error: null }
+    await expect(getEventSummary(EVENT)).resolves.toEqual({
+      id: EVENT,
+      coupleNames: 'Ana & Ben',
+      windowOpen: row.window_open,
+      windowClose: row.window_close,
+    })
+    expect(rpcCalls).toEqual([['operator_events', { p_event_id: EVENT }]])
+  })
+
+  it('null for a missing event or a malformed id; throws when the read fails', async () => {
+    rpcResult.operator_events = { data: [], error: null }
+    await expect(getEventSummary(EVENT)).resolves.toBeNull()
+    await expect(getEventSummary('nope')).resolves.toBeNull()
+    rpcResult.operator_events = { data: null, error: { message: 'x' }, status: 500 }
+    await expect(getEventSummary(EVENT)).rejects.toMatchObject({ name: 'OperatorReadError', status: 500 })
+  })
+})
+
+describe('getParticipation', () => {
+  const guest = {
+    guest_id: '00000000-0000-0000-0000-0000000000a1',
+    first_name: 'Rosa',
+    joined_at: '2026-11-14T20:00:00+00:00',
+    photos_saved: 3,
+    clips_saved: 1,
+    on_the_way: 2,
+    last_shot_at: null,
+  }
+
+  it('reads through operator_participation (never a table) and maps the rows', async () => {
+    rpcResult.operator_participation = { data: [guest, { junk: true }], error: null }
+    await expect(getParticipation(EVENT)).resolves.toEqual([
+      { guestId: guest.guest_id, firstName: 'Rosa', joinedAt: guest.joined_at, photosSaved: 3, clipsSaved: 1, onTheWay: 2, lastShotAt: null },
+    ])
+    expect(rpcCalls).toEqual([['operator_participation', { p_event_id: EVENT }]])
+    expect(queryCalls).toEqual([])
+  })
+
+  it('a malformed id has no guests, without asking the server', async () => {
+    await expect(getParticipation('nope')).resolves.toEqual([])
+    expect(rpcCalls).toEqual([])
+  })
+
+  it('throws OperatorReadError with the status when the read fails', async () => {
+    rpcResult.operator_participation = { data: null, error: { message: 'x' }, status: 503 }
+    await expect(getParticipation(EVENT)).rejects.toMatchObject({ name: 'OperatorReadError', status: 503 })
   })
 })
 

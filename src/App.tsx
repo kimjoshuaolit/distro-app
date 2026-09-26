@@ -45,6 +45,7 @@ export default function App() {
         <Route path="events/new" element={null} />
         <Route path="events/:eventId" element={null} />
         <Route path="events/:eventId/cards" element={null} />
+        <Route path="events/:eventId/dashboard" element={null} />
       </Route>
       {/* Catch-all: unknown deep links fall back to the shell instead of a blank page. */}
       <Route path="*" element={<Placeholder />} />
