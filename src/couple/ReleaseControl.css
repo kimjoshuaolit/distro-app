@@ -1,0 +1,99 @@
+/* The couple's sharing switch (2.4): a quiet panel beneath the shelf on the
+   warm reveal skin. Gold marks "on"; no red — nothing here is a commit. */
+.release {
+  margin-top: var(--space-8);
+  padding-top: var(--space-6);
+  border-top: 1px solid color-mix(in srgb, var(--reveal-surface) 15%, transparent);
+  max-width: 60ch;
+}
+
+.release__heading {
+  margin: 0 0 var(--space-3);
+  font-family: var(--font-body);
+  font-size: var(--text-h2);
+  color: var(--reveal-surface);
+}
+
+.release__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.release__label {
+  font-size: var(--text-body);
+  font-weight: 700;
+  color: var(--reveal-surface);
+}
+
+.release__text {
+  margin: var(--space-3) 0 var(--space-4);
+  font-size: var(--text-body);
+  line-height: 1.5;
+  color: color-mix(in srgb, var(--reveal-surface) 80%, transparent);
+}
+
+/* A 44px-tall tap target around a 52×30 track. */
+.release__switch {
+  position: relative;
+  flex: none;
+  width: 60px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.release__switch::before {
+  content: '';
+  position: absolute;
+  top: 7px;
+  left: 4px;
+  width: 52px;
+  height: 30px;
+  border-radius: var(--radius-pill);
+  border: 2px solid var(--hairline);
+  background: rgba(251, 243, 222, 0.08);
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.release__thumb {
+  position: absolute;
+  top: 12px;
+  left: 9px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--reveal-surface);
+  transition: transform 0.15s ease;
+}
+
+.release__switch--on::before {
+  border-color: var(--reveal-accent);
+  background: var(--reveal-accent);
+}
+
+.release__switch--on .release__thumb {
+  transform: translateX(22px);
+  background: var(--reveal-bg);
+}
+
+.release__switch[aria-disabled='true'] {
+  opacity: 0.7;
+  cursor: default;
+}
+
+.release__switch:focus-visible {
+  outline: 3px solid var(--reveal-accent);
+  outline-offset: 3px;
+  border-radius: var(--radius-sm);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .release__switch::before,
+  .release__thumb {
+    transition: none;
+  }
+}

@@ -14,7 +14,7 @@ const from = vi.fn((table: string) => {
   const own: Array<[string, unknown[]]> = [['from', [table]]]
   queryCalls.push(['from', [table]])
   const builder: Record<string, unknown> = {}
-  for (const m of ['select', 'eq', 'in', 'order', 'range', 'setHeader', 'abortSignal']) {
+  for (const m of ['select', 'eq', 'in', 'order', 'range', 'setHeader', 'abortSignal', 'maybeSingle']) {
     builder[m] = (...args: unknown[]) => {
       queryCalls.push([m, args])
       own.push([m, args])
@@ -47,6 +47,9 @@ const {
   issueCoupleViewUrls,
   getMontageUrl,
   MontageError,
+  getRelease,
+  setRelease,
+  ReleaseError,
   COLLECTION_PAGE_SIZE,
   COLLECTION_GUEST_CHUNK,
 } = await import('./api.ts')
@@ -463,6 +466,56 @@ describe('getMontageUrl', () => {
   it('treats a missing lifetime as 0', async () => {
     invoke.mockResolvedValue({ data: { url: 'https://r2/m.mp4' }, error: null })
     await expect(getMontageUrl('ev')).resolves.toEqual({ url: 'https://r2/m.mp4', expiresIn: 0 })
+  })
+})
+
+describe('getRelease', () => {
+  it('reads `released` for the event through RLS', async () => {
+    queryCalls.length = 0
+    queryResult = { data: { released: true }, error: null }
+    await expect(getRelease(OPEN_ID)).resolves.toBe(true)
+    expect(queryCalls).toContainEqual(['from', ['events']])
+    expect(queryCalls).toContainEqual(['select', ['released']])
+    expect(queryCalls).toContainEqual(['eq', ['id', OPEN_ID]])
+    queryResult = { data: { released: false }, error: null }
+    await expect(getRelease(OPEN_ID)).resolves.toBe(false)
+  })
+
+  it('an invisible row is not_couple; a failed read or odd value is server_error', async () => {
+    queryResult = { data: null, error: null }
+    await expect(getRelease(OPEN_ID)).rejects.toMatchObject({ name: 'ReleaseError', code: 'not_couple' })
+    queryResult = { data: null, error: { message: 'boom' } }
+    await expect(getRelease(OPEN_ID)).rejects.toMatchObject({ code: 'server_error' })
+    queryResult = { data: { released: 'yes' }, error: null }
+    await expect(getRelease(OPEN_ID)).rejects.toMatchObject({ code: 'server_error' })
+    queryResult = { data: [], error: null }
+  })
+})
+
+describe('setRelease', () => {
+  it('sends the explicit value to set-release with a timeout and returns what was saved', async () => {
+    invoke.mockResolvedValue({ data: { released: true }, error: null })
+    await expect(setRelease('ev', true)).resolves.toBe(true)
+    const [name, opts] = invoke.mock.calls[0]
+    expect(name).toBe('set-release')
+    expect(opts.body).toEqual({ eventId: 'ev', released: true })
+    expect(opts.timeout).toBeGreaterThan(0)
+  })
+
+  it('throws a typed ReleaseError carrying the server code', async () => {
+    invoke.mockResolvedValue(typedError('not_couple', 'This reveal belongs to another couple.'))
+    const err = await setRelease('ev', true).catch((e: unknown) => e)
+    expect(err).toBeInstanceOf(ReleaseError)
+    expect(err).toMatchObject({ code: 'not_couple' })
+    invoke.mockResolvedValue({ data: null, error: { message: 'timeout' } })
+    await expect(setRelease('ev', false)).rejects.toMatchObject({ code: 'server_error' })
+  })
+
+  it('a malformed response is a server_error, never a silent success', async () => {
+    for (const data of [null, {}, { released: 'true' }, 'x']) {
+      invoke.mockResolvedValue({ data, error: null })
+      await expect(setRelease('ev', true), JSON.stringify(data)).rejects.toMatchObject({ code: 'server_error' })
+    }
   })
 })
 

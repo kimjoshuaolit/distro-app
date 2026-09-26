@@ -374,6 +374,57 @@ export async function getMontageUrl(eventId: string): Promise<MontageUrl> {
   return { url: data.url, expiresIn: typeof data.expiresIn === 'number' ? data.expiresIn : 0 }
 }
 
+export class ReleaseError extends Error {
+  code: string
+  constructor(code: string, message: string) {
+    super(message)
+    this.name = 'ReleaseError'
+    this.code = code
+  }
+}
+
+const RELEASE_READ_TIMEOUT_MS = 15_000
+
+/**
+ * Whether the couple has marked their collection okay to share (2.4). Read
+ * through RLS (AD-3): only this event's couple can see the row. Throws
+ * `ReleaseError` — `not_couple` when the row isn't visible, else `server_error`.
+ */
+export async function getRelease(eventId: string): Promise<boolean> {
+  const { data, error } = await supabase
+    .from('events')
+    .select('released')
+    .eq('id', eventId)
+    .abortSignal(AbortSignal.timeout(RELEASE_READ_TIMEOUT_MS))
+    .maybeSingle()
+  if (error) throw new ReleaseError('server_error', 'Could not load the sharing setting.')
+  if (!data) throw new ReleaseError('not_couple', 'This reveal belongs to another couple.')
+  const released = (data as { released?: unknown }).released
+  if (typeof released !== 'boolean') throw new ReleaseError('server_error', 'Unexpected response from the server.')
+  return released
+}
+
+/**
+ * Set the couple's sharing flag to an explicit value (never a toggle) through
+ * the `set-release` Edge Function — the only write path (AD-3). Resolves with
+ * the value the server saved. Throws `ReleaseError` with the server's code
+ * (`not_couple`, `bad_request`, `server_error`) on any failure, including a
+ * timeout or a malformed response.
+ */
+export async function setRelease(eventId: string, released: boolean): Promise<boolean> {
+  const { data, error } = await supabase.functions.invoke('set-release', {
+    body: { eventId, released },
+    timeout: FUNCTION_TIMEOUT_MS,
+  })
+  if (error) {
+    const { code, message } = await parseFunctionError(error)
+    throw new ReleaseError(code, message)
+  }
+  const saved = (data as { released?: unknown } | null)?.released
+  if (typeof saved !== 'boolean') throw new ReleaseError('server_error', 'Unexpected response from the server.')
+  return saved
+}
+
 /** Mark the shot uploaded server-side after a successful PUT. Idempotent. */
 export async function confirmUpload(deviceToken: string, clientShotId: string): Promise<void> {
   const { error } = await supabase.functions.invoke('confirm-upload', {

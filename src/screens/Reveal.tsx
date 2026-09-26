@@ -15,6 +15,7 @@ import { useCollection } from '../couple/useCollection.ts'
 import RollShelf from '../couple/RollShelf.tsx'
 import CoupleRoll from '../couple/CoupleRoll.tsx'
 import MontageStage from '../couple/MontageStage.tsx'
+import ReleaseControl from '../couple/ReleaseControl.tsx'
 import './Reveal.css'
 
 const LINK_ERROR_COPY: Record<LinkError, string> = {
@@ -267,6 +268,8 @@ function Collection({
           />
         </>
       )}
+
+      <ReleaseControl eventId={eventId} />
 
       {footer}
     </>

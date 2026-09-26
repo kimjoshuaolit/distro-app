@@ -89,10 +89,11 @@ select throws_ok($$select montage_key from public.events$$, '42501', NULL, 'coup
 select throws_ok($$select r2_key from public.shots$$, '42501', NULL, 'couple cannot read shots.r2_key');
 select throws_ok($$select * from public.event_couples$$, '42501', NULL, 'couple cannot read event_couples');
 
--- Read-only: couple writes are refused or silently filtered (release is 2.4).
-select lives_ok(
+-- Read-only: couple writes are refused or silently filtered (release goes only
+-- through the set-release Edge Function, 2.4 — no client role may update events).
+select throws_ok(
   $$update public.events set released = true where id = 'c0c0c0c0-0000-4000-8000-0000000000e1'$$,
-  'couple update of events runs but is filtered by RLS (no update policy)');
+  '42501', NULL, 'couple update of events is refused (no UPDATE privilege, 2.4)');
 select is((select released from public.events where id = 'c0c0c0c0-0000-4000-8000-0000000000e1'), false,
   '...and released is unchanged');
 select lives_ok($$delete from public.shots where client_shot_id = 'rosa-1'$$,
