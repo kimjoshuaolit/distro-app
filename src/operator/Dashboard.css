@@ -88,6 +88,10 @@
   font-weight: 700;
 }
 
+.dash__guests-heading {
+  margin-top: var(--space-6);
+}
+
 .dash__hint {
   margin-top: var(--space-6);
 }

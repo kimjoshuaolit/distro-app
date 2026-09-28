@@ -41,6 +41,8 @@ const {
   getEvent,
   getEventSummary,
   getParticipation,
+  listExportShots,
+  issueExportUrls,
   saveEvent,
   setWindow,
   SaveEventError,
@@ -197,6 +199,92 @@ describe('getParticipation', () => {
   it('throws OperatorReadError with the status when the read fails', async () => {
     rpcResult.operator_participation = { data: null, error: { message: 'x' }, status: 503 }
     await expect(getParticipation(EVENT)).rejects.toMatchObject({ name: 'OperatorReadError', status: 503 })
+  })
+})
+
+describe('listExportShots', () => {
+  const shotRow = (n: number) => ({
+    shot_id: `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`,
+    guest_id: '00000000-0000-4000-8000-0000000000a1',
+    type: n % 2 ? 'photo' : 'clip',
+    taken_at: '2026-11-14T21:00:00+00:00',
+    ext: n % 2 ? 'jpg' : 'mp4',
+  })
+
+  it('reads through operator_export_shots and maps rows (never a table)', async () => {
+    const page = [shotRow(1), shotRow(2), { junk: 1 }, { ...shotRow(3), type: 'gif' }]
+    let call = 0
+    rpcResult = new Proxy({} as typeof rpcResult, { get: () => ({ data: call++ === 0 ? page : [], error: null }) })
+    const shots = await listExportShots(EVENT)
+    expect(shots).toEqual([
+      { shotId: shotRow(1).shot_id, guestId: shotRow(1).guest_id, type: 'photo', takenAt: shotRow(1).taken_at, ext: 'jpg' },
+      { shotId: shotRow(2).shot_id, guestId: shotRow(2).guest_id, type: 'clip', takenAt: shotRow(2).taken_at, ext: 'mp4' },
+    ])
+    expect(rpcCalls[0]).toEqual(['operator_export_shots', { p_event_id: EVENT, p_after: null }])
+    expect(rpcCalls).toHaveLength(2) // then an empty page ends it
+    expect(queryCalls).toEqual([])
+  })
+
+  it('a page that doesn’t move past the last id stops the listing (no duplicates)', async () => {
+    rpcResult.operator_export_shots = { data: [shotRow(1)], error: null } // the same page every time
+    await expect(listExportShots(EVENT)).resolves.toHaveLength(1)
+    expect(rpcCalls).toHaveLength(2)
+  })
+
+  it('follows pages with the last id seen until an empty page — whatever the page size', async () => {
+    const pages = [
+      Array.from({ length: 500 }, (_, i) => shotRow(i + 1)), // a server cap below the function's 1000
+      [shotRow(501)],
+      [],
+    ]
+    let call = 0
+    rpcResult = new Proxy({} as typeof rpcResult, {
+      get: () => ({ data: pages[Math.min(call++, pages.length - 1)], error: null }),
+    })
+    const shots = await listExportShots(EVENT)
+    expect(shots).toHaveLength(501)
+    expect(rpcCalls.map((c) => (c[1] as { p_after: unknown }).p_after)).toEqual([null, shotRow(500).shot_id, shotRow(501).shot_id])
+  })
+
+  it('a malformed id lists nothing without asking; a failed read throws', async () => {
+    await expect(listExportShots('nope')).resolves.toEqual([])
+    expect(rpcCalls).toEqual([])
+    rpcResult.operator_export_shots = { data: null, error: { message: 'x' }, status: 500 }
+    await expect(listExportShots(EVENT)).rejects.toMatchObject({ name: 'OperatorReadError', status: 500 })
+  })
+})
+
+describe('issueExportUrls', () => {
+  it('posts ids (and the montage flag) to issue-export-urls and returns the links', async () => {
+    invoke.mockResolvedValue({ data: { urls: { a: 'https://r2/a', b: 7 }, montage: { url: 'https://r2/m', ext: 'mp4' }, expiresIn: 600 }, error: null })
+    await expect(issueExportUrls(EVENT, ['a', 'b'], true)).resolves.toEqual({
+      urls: { a: 'https://r2/a' },
+      montage: { url: 'https://r2/m', ext: 'mp4' },
+    })
+    const [name, opts] = invoke.mock.calls[0]
+    expect(name).toBe('issue-export-urls')
+    expect(opts.body).toEqual({ eventId: EVENT, shotIds: ['a', 'b'], montage: true })
+  })
+
+  it('no montage hosted is null; a malformed montage answer is an error', async () => {
+    invoke.mockResolvedValue({ data: { urls: {}, montage: null }, error: null })
+    await expect(issueExportUrls(EVENT, [], true)).resolves.toEqual({ urls: {}, montage: null })
+    invoke.mockResolvedValue({ data: { urls: {}, montage: { url: 1 } }, error: null })
+    await expect(issueExportUrls(EVENT, [], true)).rejects.toMatchObject({ name: 'ExportError', code: 'server_error' })
+    invoke.mockResolvedValue({ data: { urls: {} }, error: null })
+    await expect(issueExportUrls(EVENT, [], true)).rejects.toMatchObject({ code: 'server_error' })
+  })
+
+  it('a token the gateway refuses (401) reads as not_operator', async () => {
+    invoke.mockResolvedValue({ data: null, error: { context: new Response('{"msg":"Invalid JWT"}', { status: 401 }) } })
+    await expect(issueExportUrls(EVENT, ['a'], false)).rejects.toMatchObject({ code: 'not_operator' })
+  })
+
+  it('carries the server code; a malformed answer is a server_error', async () => {
+    invoke.mockResolvedValue(typedError('not_operator'))
+    await expect(issueExportUrls(EVENT, ['a'], false)).rejects.toMatchObject({ code: 'not_operator' })
+    invoke.mockResolvedValue({ data: { urls: [] }, error: null })
+    await expect(issueExportUrls(EVENT, ['a'], false)).rejects.toMatchObject({ code: 'server_error' })
   })
 })
 

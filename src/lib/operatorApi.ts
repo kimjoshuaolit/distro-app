@@ -6,6 +6,8 @@ import { supabase } from './supabase'
 import { isEventId, mapOtpError, normalizeEmail, type MagicLinkResult } from './coupleAuth'
 import type { SaveEventRequest } from '../../supabase/functions/_shared/operator-rules.ts'
 import { toGuestRows, type GuestParticipation } from '../operator/participation'
+import type { ExportShot } from '../operator/exportPlan'
+import type { Signed } from '../operator/exportRunner'
 
 const READ_TIMEOUT_MS = 15_000
 const FUNCTION_TIMEOUT_MS = 20_000
@@ -114,6 +116,84 @@ export async function getParticipation(eventId: string): Promise<GuestParticipat
     .abortSignal(AbortSignal.timeout(READ_TIMEOUT_MS))
   if (error) throw new OperatorReadError(status ?? 0)
   return toGuestRows(data)
+}
+
+type ExportShotRow = { shot_id: string; guest_id: string; type: string; taken_at: string; ext: string | null }
+
+/**
+ * Every uploaded shot of one event for Download all (Story 3.4): metadata
+ * only, never storage keys. Read through `operator_export_shots()` (operator
+ * only), following its keyset pages (≤1000 rows each). Malformed rows are dropped.
+ */
+export async function listExportShots(eventId: string): Promise<ExportShot[]> {
+  if (!isEventId(eventId)) return []
+  const shots: ExportShot[] = []
+  let after: string | null = null
+  for (;;) {
+    const { data, error, status }: { data: unknown; error: unknown; status: number } = await supabase
+      .rpc('operator_export_shots', { p_event_id: eventId, p_after: after })
+      .abortSignal(AbortSignal.timeout(READ_TIMEOUT_MS))
+    if (error) throw new OperatorReadError(status ?? 0)
+    const rows: ExportShotRow[] = Array.isArray(data) ? (data as ExportShotRow[]) : []
+    const last: string | undefined = rows.at(-1)?.shot_id
+    // Keep asking until an empty page: never infer the end from a page size
+    // (the server's row cap may be lower than the function's limit). A page
+    // that doesn't move past the last id is a server fault: stop, add nothing.
+    if (rows.length === 0 || typeof last !== 'string' || last === after) return shots
+    for (const r of rows) {
+      if (typeof r?.shot_id !== 'string' || typeof r.guest_id !== 'string' || typeof r.taken_at !== 'string') continue
+      if (r.type !== 'photo' && r.type !== 'clip') continue
+      shots.push({ shotId: r.shot_id, guestId: r.guest_id, type: r.type, takenAt: r.taken_at, ext: r.ext ?? '' })
+    }
+    after = last
+  }
+}
+
+export class ExportError extends Error {
+  code: string
+  constructor(code: string, message: string) {
+    super(message)
+    this.name = 'ExportError'
+    this.code = code
+  }
+}
+
+/**
+ * 10-minute download links for up to 100 shots (and the hosted montage, when
+ * asked) from issue-export-urls. Ids it couldn't sign are simply missing from
+ * `urls`. Throws `ExportError` (`not_operator`, `bad_request`, `server_error`).
+ */
+export async function issueExportUrls(eventId: string, shotIds: string[], montage: boolean): Promise<Signed> {
+  const { data, error } = await supabase.functions.invoke('issue-export-urls', {
+    body: { eventId, shotIds, montage },
+    timeout: FUNCTION_TIMEOUT_MS,
+  })
+  if (error) {
+    // A token the gateway refuses (expired or revoked) never reaches the
+    // function's own not_operator answer: treat it the same way.
+    if ((error as { context?: Response }).context?.status === 401) {
+      throw new ExportError('not_operator', 'Your sign-in has ended.')
+    }
+    const { code, message } = await functionError(error)
+    throw new ExportError(code, message)
+  }
+  const d = data as { urls?: unknown; montage?: unknown } | null
+  if (!d || typeof d.urls !== 'object' || d.urls === null || Array.isArray(d.urls)) {
+    throw new ExportError('server_error', 'Unexpected response from the server.')
+  }
+  const urls: Record<string, string> = {}
+  for (const [id, url] of Object.entries(d.urls as Record<string, unknown>)) {
+    if (typeof url === 'string') urls[id] = url
+  }
+  const m = d.montage as { url?: unknown; ext?: unknown } | null | undefined
+  const out: Signed = { urls }
+  if (montage) {
+    // null = nothing hosted. Anything else malformed is an error, never "no montage".
+    if (m === null) out.montage = null
+    else if (m && typeof m.url === 'string' && typeof m.ext === 'string') out.montage = { url: m.url, ext: m.ext }
+    else throw new ExportError('server_error', 'Unexpected response from the server.')
+  }
+  return out
 }
 
 export class SaveEventError extends Error {

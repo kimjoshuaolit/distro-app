@@ -121,3 +121,19 @@ Surfaced during builds; revisit deliberately. Append-only.
 - source_spec: `spec-3-3-participation-dashboard.md`
   summary: Component tests for `Dashboard` (loading, missing, failed, stale and empty screens) and the `useParticipation` visibility/online listeners, once a jsdom + React Testing Library harness exists.
   evidence: Same harness gap as the earlier component deferrals. The pure refresher, state fold and row mapping are unit-tested, and every screen was verified live in the browser for 3.3.
+
+- source_spec: `spec-3-4-download-all-media.md`
+  summary: Navigating away inside the app (e.g. "← Back to the event") during a Download all run cancels it without asking. Only a full page unload prompts.
+  evidence: The app uses `BrowserRouter`, which has no `useBlocker`. The run stops cleanly and a re-run resumes, so nothing is lost, but the operator gets no warning. The review raised it.
+
+- source_spec: `spec-3-4-download-all-media.md`
+  summary: A re-hosted montage isn't re-downloaded while an older `montage.<ext>` is in the folder, because a saved file is never overwritten.
+  evidence: Kim edits the montage himself and already has the file. The README says to delete `montage.<ext>` first. Naming the file by montage version would fix it. The review raised it.
+
+- source_spec: `spec-3-4-download-all-media.md`
+  summary: File names use the laptop's time zone. A re-run from a computer in a different zone would name, and so re-download, everything a second time next to the first copies.
+  evidence: The event has no stored time zone. Kim downloads from one laptop, so the risk is low. Storing an event time zone would fix it. The review raised it.
+
+- source_spec: `spec-3-4-download-all-media.md`
+  summary: Show the expected total size before a Download all starts (so disk space can be checked), and add component tests for `DownloadAll` (picker closed, wrong-folder marker, session ended, manifest failure) once a jsdom harness exists.
+  evidence: The listing carries no object sizes. The same component-test harness gap is already logged. Every panel state was verified live in the browser against OPFS.

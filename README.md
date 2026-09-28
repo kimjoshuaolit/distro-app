@@ -108,6 +108,25 @@ Going live with the console, on the hosted Supabase project:
 An email that already has an account (for example a couple's) still receives
 a link at `/operator`, but then sees "This console is for the operator".
 
+### Download all (for the montage edit)
+
+Each event's **Dashboard** has a **Download all** panel. You pick a folder
+(Chrome or Edge on a laptop) and every uploaded photo and clip streams into it:
+
+- one folder per guest, e.g. `Rosa/2026-11-14 21.40.05 photo 3f2a.jpg`. The
+  four-character tag comes from the shot's id, so names never change between runs;
+- `montage.<ext>`, if a montage is hosted;
+- `manifest.csv`.
+
+Running it again only fetches what's missing, so it resumes after an
+interruption and picks up late uploads. A small `.dispo-retro-cam-event` file
+marks the folder as that event's, so two events never mix. The montage is saved
+once: if you host a new cut, delete `montage.<ext>` first. Links come from the
+`issue-export-urls` Edge Function (operator only, 10-minute links, at most 100
+at a time). The browser reads them with `fetch`, so in production the R2 bucket's
+CORS rule must allow **GET** as well as PUT from the app's origin (see
+`supabase/functions/.env.example`).
+
 ## Hosting the montage (operator only)
 
 The couple's reveal plays one finished montage that you cut in your own editor.

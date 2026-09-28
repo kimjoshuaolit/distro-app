@@ -1,0 +1,16 @@
+/* Download all (Story 3.4) — a panel on the O2 dashboard, same card as the
+   Camera panel. */
+.dl {
+  margin-top: var(--space-6);
+}
+
+.dl__progress progress {
+  width: 100%;
+  height: 12px;
+  accent-color: var(--kodak-red);
+}
+
+.dl__progress .op__body {
+  margin: var(--space-2) 0 0;
+  font-variant-numeric: tabular-nums;
+}

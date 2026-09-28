@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { formatAgo, totals, type GuestParticipation } from './participation'
 import { joinUrl } from './qr'
 import { useParticipation } from './useParticipation'
+import DownloadAll from './DownloadAll'
 import { windowLine } from './windowLine'
 import './Dashboard.css'
 
@@ -135,7 +136,10 @@ export default function Dashboard({ eventId }: { eventId: string }) {
         </p>
       )}
 
-      <h2 className="op__h2">Guests, newest first</h2>
+      {/* Keyed by event: another event's run or summary never carries over. */}
+      <DownloadAll key={eventId} eventId={eventId} />
+
+      <h2 className="op__h2 dash__guests-heading">Guests, newest first</h2>
       {rows.length === 0 ? (
         <p className="op__body">
           No one has joined yet. Guests join at{' '}
