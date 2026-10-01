@@ -7,9 +7,9 @@
 // (operator_save_event). Removing an email ends that partner's access at once.
 import { createClient } from 'jsr:@supabase/supabase-js@2'
 import { decideOperatorAccess, mapSaveError, validateSaveEventRequest } from '../_shared/operator-rules.ts'
+import { withCors } from '../_shared/cors.ts'
 
 const cors = {
-  'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 }
@@ -36,7 +36,7 @@ function describe(error: unknown): Record<string, unknown> {
 
 const noSession = { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }
 
-Deno.serve(async (req: Request) => {
+Deno.serve(withCors(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors })
   if (req.method !== 'POST') return fail('method_not_allowed', 'Use POST.', 405)
 
@@ -98,4 +98,4 @@ Deno.serve(async (req: Request) => {
     return unreachable()
   }
   return json({ eventId: savedId })
-})
+}))

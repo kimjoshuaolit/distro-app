@@ -7,9 +7,9 @@
 import { createClient } from 'jsr:@supabase/supabase-js@2'
 import { decideOperatorAccess } from '../_shared/operator-rules.ts'
 import { mapSetWindowError, validateSetWindowRequest } from '../_shared/window-rules.ts'
+import { withCors } from '../_shared/cors.ts'
 
 const cors = {
-  'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 }
@@ -33,7 +33,7 @@ function describe(error: unknown): Record<string, unknown> {
 
 const noSession = { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }
 
-Deno.serve(async (req: Request) => {
+Deno.serve(withCors(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors })
   if (req.method !== 'POST') return fail('method_not_allowed', 'Use POST.', 405)
 
@@ -86,4 +86,4 @@ Deno.serve(async (req: Request) => {
     return fail('server_error', 'Could not change the camera window.', 500)
   }
   return json({ windowOpen: row.window_open, windowClose: row.window_close })
-})
+}))

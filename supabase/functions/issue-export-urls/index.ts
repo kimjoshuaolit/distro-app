@@ -10,9 +10,9 @@ import { decideOperatorAccess } from '../_shared/operator-rules.ts'
 import { EXPORT_TTL_SECONDS, montageLink, validateExportRequest } from '../_shared/export-rules.ts'
 import { toCoupleViewUrlMap, type CoupleViewableRow } from '../_shared/view-rules.ts'
 import { presignGet } from '../_shared/r2.ts'
+import { withCors } from '../_shared/cors.ts'
 
 const cors = {
-  'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 }
@@ -38,7 +38,7 @@ const unreachable = () => fail('server_error', 'Could not sign download links.',
 
 const noSession = { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }
 
-Deno.serve(async (req: Request) => {
+Deno.serve(withCors(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors })
   if (req.method !== 'POST') return fail('method_not_allowed', 'Use POST.', 405)
 
@@ -134,4 +134,4 @@ Deno.serve(async (req: Request) => {
   }
 
   return json(body)
-})
+}))

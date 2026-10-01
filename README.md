@@ -63,17 +63,13 @@ The seed creates three test events:
 
 Stop the stack with `npx supabase stop`.
 
-### Deploying the backend to a hosted project (later)
+### Going live
 
-When you're ready to go live (needs a Supabase account):
-
-```bash
-npx supabase link --project-ref <your-project-ref>
-npx supabase db push                     # apply migrations to the cloud DB
-npx supabase functions deploy join-event
-```
-
-Then set the hosted project's URL + anon key as the app's production env vars.
+Follow **[docs/GO-LIVE.md](docs/GO-LIVE.md)**. It's the ordered runbook for
+Cloudflare Pages and R2, the hosted Supabase project (Auth settings that
+`config.toml` only applies locally), the email sender and the function secrets.
+It ends with `npm run smoke:prod`, a one-command check of the live deploy, and
+a real-phone dress rehearsal.
 
 ## The operator console (operator only)
 

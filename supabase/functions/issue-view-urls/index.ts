@@ -5,9 +5,9 @@
 import { createClient } from 'jsr:@supabase/supabase-js@2'
 import { toViewUrlMap, validateViewRequest, VIEW_TTL_SECONDS, type ViewableRow } from '../_shared/view-rules.ts'
 import { presignGet } from '../_shared/r2.ts'
+import { withCors } from '../_shared/cors.ts'
 
 const cors = {
-  'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 }
@@ -23,7 +23,7 @@ function fail(code: string, message: string, status: number): Response {
   return json({ error: { code, message } }, status)
 }
 
-Deno.serve(async (req: Request) => {
+Deno.serve(withCors(async (req: Request) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors })
   if (req.method !== 'POST') return fail('method_not_allowed', 'Use POST.', 405)
 
@@ -64,4 +64,4 @@ Deno.serve(async (req: Request) => {
   }
 
   return json({ urls, expiresIn: VIEW_TTL_SECONDS })
-})
+}))
