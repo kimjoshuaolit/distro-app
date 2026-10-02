@@ -20,7 +20,7 @@ Throughout, **`<origin>`** is your site's address with no trailing slash, e.g.
 |---|---|---|
 | **Supabase** | Database, sign-in, Edge Functions | Free tier works, but see "pausing" below |
 | **Cloudflare** | R2 (photo and video storage) + Pages (the site) | Pages is free. R2 is free up to 10 GB, then about $0.015 per GB per month. Enabling R2 needs a payment method on file. |
-| **An email sender** (recommended: **Resend**) | Sign-in links for you and the couple | Free tier is plenty |
+| **An email sender**: your **Gmail** (no domain) or **Resend** (own domain) | Sign-in links for you and the couple | Free |
 
 - **The email sender.** Supabase's built-in email only sends a few messages an
   hour and may only deliver to your own team. A sign-in link that never arrives
@@ -108,11 +108,26 @@ each of these is a dashboard setting.
    - Subject: `Your wedding reveal — here's your link`.
    - Body: paste the whole file, `supabase/templates/magic_link.html` and
      `supabase/templates/confirmation.html` respectively.
-5. **Authentication → SMTP Settings** (with your email sender, e.g. Resend):
-   - Add and verify your sending domain at the provider. It's a few DNS
-     records; they show you which.
-   - Host `smtp.resend.com`, port `465`, user `resend`, password = an API key,
-     sender e.g. `camera@yourdomain.com`, name `dispo-retro-cam`.
+5. **Authentication → SMTP Settings** — pick one:
+   - **No domain of your own (the `pages.dev` setup): use Gmail.**
+     1. Turn on 2-Step Verification for your Google account.
+     2. Go to **myaccount.google.com → Security → App passwords**, and create one
+        named "dispo-retro-cam".
+     3. In Supabase, set:
+        - host `smtp.gmail.com`, port `465`;
+        - user: your full Gmail address; password: the 16-character app password;
+        - sender: your Gmail address; name: `dispo-retro-cam`.
+
+     Gmail allows about 500 emails a day, far more than you need.
+   - **With your own domain: use Resend.**
+     1. Add and verify the domain at Resend. It's a few DNS records; they show
+        you which.
+     2. In Supabase, set:
+        - host `smtp.resend.com`, port `465`;
+        - user `resend`; password: an API key;
+        - sender e.g. `camera@yourdomain.com`; name `dispo-retro-cam`.
+
+     Resend can't send to other people without a verified domain.
 6. **Authentication → Rate Limits**: raise **emails per hour** from the default
    of **2** to ~30. You need a few per day, but a rehearsal uses more than 2 an
    hour.
