@@ -214,7 +214,7 @@ export default function Camera() {
 
           <video
             ref={videoRef}
-            className="camera__viewfinder retro-grade"
+            className={`camera__viewfinder retro-grade${camera.facingMode === 'user' ? ' is-mirrored' : ''}`}
             playsInline
             muted
             autoPlay

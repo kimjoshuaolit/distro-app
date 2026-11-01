@@ -76,6 +76,11 @@
   background: var(--viewfinder-bg);
 }
 
+/* Selfies preview like a mirror; the saved shot stays true, so text reads right. */
+.camera__viewfinder.is-mirrored {
+  transform: scaleX(-1);
+}
+
 /* Today's date, just above the controls: a photo's real corner sits behind them. */
 .camera__stamp {
   right: var(--space-4);
