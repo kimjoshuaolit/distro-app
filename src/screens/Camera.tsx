@@ -12,6 +12,7 @@ import Shutter from '../ui/Shutter.tsx'
 import RecordButton from '../ui/RecordButton.tsx'
 import ModeToggle, { type CaptureMode } from '../ui/ModeToggle.tsx'
 import UploadIndicator from '../ui/UploadIndicator.tsx'
+import '../ui/RetroPlayback.css' // the live viewfinder wears the film look (.retro-grade)
 import './Camera.css'
 
 function formatElapsed(ms: number): string {
@@ -46,7 +47,7 @@ export default function Camera() {
   const navigate = useNavigate()
   const session = getGuestSession(eventToken)
 
-  const camera = useCamera()
+  const camera = useCamera(Boolean(session))
   const videoRef = useRef<HTMLVideoElement>(null)
   const capturingRef = useRef(false) // synchronous re-entry guard (survives rapid taps)
   const photosRef = useRef(session?.photosRemaining ?? 0)
@@ -212,7 +213,7 @@ export default function Camera() {
 
           <video
             ref={videoRef}
-            className="camera__viewfinder"
+            className="camera__viewfinder retro-grade"
             playsInline
             muted
             autoPlay
