@@ -9,10 +9,12 @@
   background: var(--viewfinder-bg);
 }
 
-/* Warm FunSaver grade, matching the baked photo look as closely as CSS allows. */
+/* Warm FunSaver grade, matching the baked photo look as closely as CSS allows.
+   Fitted numerically to RETRO's warmR/G/B + lift in src/capture/retro.ts, so
+   re-fit if those change. */
 .retro__video,
 .retro-grade {
-  filter: sepia(0.18) saturate(1.2) contrast(1.06) brightness(1.03) hue-rotate(-6deg);
+  filter: sepia(0.2) saturate(1.2) contrast(0.98) brightness(1.03);
 }
 
 .retro__video {

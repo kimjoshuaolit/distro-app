@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Navigate, useNavigate, useParams } from 'react-router-dom'
 import { useCamera } from '../capture/useCamera.ts'
 import { capturePhoto } from '../capture/capturePhoto.ts'
+import { formatStamp } from '../capture/retro.ts'
 import { useClipRecorder } from '../capture/useClipRecorder.ts'
 import { saveClip } from '../capture/captureClip.ts'
 import { useUploader } from '../capture/useUploader.ts'
@@ -219,6 +220,7 @@ export default function Camera() {
             autoPlay
             onLoadedData={() => setVideoReady(true)}
           />
+          <div className="retro__grain" aria-hidden="true" />
 
           {recorder.recording && (
             <div className="camera__rec" role="status" aria-label="Recording">
@@ -267,6 +269,9 @@ export default function Camera() {
           )}
 
           <div className="camera__controls">
+            <span className="retro__stamp camera__stamp" aria-hidden="true">
+              {formatStamp(new Date())}
+            </span>
             <div className="camera__upload">
               <UploadIndicator
                 state={uploader.state}

@@ -76,6 +76,12 @@
   background: var(--viewfinder-bg);
 }
 
+/* Today's date, just above the controls: a photo's real corner sits behind them. */
+.camera__stamp {
+  right: var(--space-4);
+  bottom: 100%;
+}
+
 .camera__statusbar {
   position: relative;
   z-index: 2;
