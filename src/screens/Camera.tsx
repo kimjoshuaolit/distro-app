@@ -3,6 +3,15 @@ import { Navigate, useNavigate, useParams } from 'react-router-dom'
 import { useCamera } from '../capture/useCamera.ts'
 import { capturePhoto } from '../capture/capturePhoto.ts'
 import { formatStamp } from '../capture/retro.ts'
+import {
+  isDark,
+  measureLuma,
+  nextFlashMode,
+  planFlash,
+  setTorch,
+  withFlash,
+  type FlashMode,
+} from '../capture/flash.ts'
 import { useClipRecorder } from '../capture/useClipRecorder.ts'
 import { saveClip } from '../capture/captureClip.ts'
 import { useUploader } from '../capture/useUploader.ts'
@@ -67,6 +76,17 @@ export default function Camera() {
   const [videoReady, setVideoReady] = useState(false)
   const [flash, setFlash] = useState(false)
   const [captureError, setCaptureError] = useState<string | null>(null)
+  const [flashMode, setFlashMode] = useState<FlashMode>('auto')
+  const [screenFlash, setScreenFlash] = useState(false)
+  const clipTorchRef = useRef(false)
+
+  // The torch stays on for a whole clip, however the recording ends.
+  useEffect(() => {
+    const track = camera.stream?.getVideoTracks()[0]
+    if (!recorder.recording || !track || !clipTorchRef.current) return
+    void setTorch(track, true)
+    return () => void setTorch(track, false)
+  }, [recorder.recording, camera.stream])
 
   useEffect(() => {
     const v = videoRef.current
@@ -90,13 +110,26 @@ export default function Camera() {
     setCapturing(true)
     setCaptureError(null)
 
+    const video = videoRef.current
+    const track = camera.stream?.getVideoTracks()[0]
+    const plan = planFlash({
+      mode: flashMode,
+      facing: camera.facingMode,
+      kind: 'photo',
+      dark: isDark(measureLuma(video)),
+    })
+
     let saved = false
     try {
-      await capturePhoto({
-        video: videoRef.current,
-        eventId: eventToken,
-        guestId: session.guestId,
-      })
+      await withFlash(
+        track ? plan : 'none',
+        {
+          torch: (on) => setTorch(track as MediaStreamTrack, on),
+          screen: setScreenFlash,
+          wait: (ms) => new Promise((resolve) => window.setTimeout(resolve, ms)),
+        },
+        () => capturePhoto({ video, eventId: eventToken, guestId: session.guestId }),
+      )
       saved = true
     } catch {
       setCaptureError('That shot didn’t save — give it another tap.')
@@ -150,6 +183,9 @@ export default function Camera() {
       recorder.stop()
     } else if (!locked && clipsRef.current > 0 && videoReady) {
       setCaptureError(null)
+      const dark = videoRef.current ? isDark(measureLuma(videoRef.current)) : false
+      clipTorchRef.current =
+        planFlash({ mode: flashMode, facing: camera.facingMode, kind: 'clip', dark }) === 'torch'
       recorder.start(handleClipComplete)
     }
   }
@@ -209,6 +245,15 @@ export default function Camera() {
         <div className="camera__stage">
           <div className="camera__statusbar">
             <span className="camera__name">{session.firstName}</span>
+            <button
+              type="button"
+              className="camera__flashmode"
+              onClick={() => setFlashMode(nextFlashMode)}
+              aria-label={`Flash: ${flashMode}. Tap to change.`}
+              disabled={recorder.recording || capturing}
+            >
+              <span aria-hidden="true">⚡</span> {flashMode}
+            </button>
             <Counter photos={photos} clips={clips} />
           </div>
 
@@ -230,6 +275,7 @@ export default function Camera() {
           )}
 
           {flash && <div className="camera__flash" aria-hidden="true" />}
+          {screenFlash && <div className="camera__screenflash" aria-hidden="true" />}
 
           {locked && !recorder.recording && (
             <div className="camera__finished" role="status">
