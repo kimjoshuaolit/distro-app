@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react'
 import { Navigate, useNavigate, useParams } from 'react-router-dom'
 import { useCamera } from '../capture/useCamera.ts'
 import { capturePhoto } from '../capture/capturePhoto.ts'
-import { formatStamp } from '../capture/retro.ts'
 import {
   isDark,
   measureLuma,
@@ -257,14 +256,18 @@ export default function Camera() {
             <Counter photos={photos} clips={clips} />
           </div>
 
-          <video
-            ref={videoRef}
-            className={`camera__viewfinder retro-grade${camera.facingMode === 'user' ? ' is-mirrored' : ''}`}
-            playsInline
-            muted
-            autoPlay
-            onLoadedData={() => setVideoReady(true)}
-          />
+          {/* Photos are cropped to the Instax shape, so the photo viewfinder shows exactly that. */}
+          <div className={`camera__window${mode === 'photo' ? ' is-instax' : ''}`}>
+            <video
+              ref={videoRef}
+              className={`camera__viewfinder retro-grade${camera.facingMode === 'user' ? ' is-mirrored' : ''}`}
+              playsInline
+              muted
+              autoPlay
+              onLoadedData={() => setVideoReady(true)}
+            />
+            <div className="retro__vignette" aria-hidden="true" />
+          </div>
           <div className="retro__grain" aria-hidden="true" />
 
           {recorder.recording && (
@@ -315,9 +318,6 @@ export default function Camera() {
           )}
 
           <div className="camera__controls">
-            <span className="retro__stamp camera__stamp" aria-hidden="true">
-              {formatStamp(new Date())}
-            </span>
             <div className="camera__upload">
               <UploadIndicator
                 state={uploader.state}

@@ -92,7 +92,6 @@ export default function RollViewer({ items, index, total, onIndex, onClose, onMe
           <RetroPlayback
             key={item.id}
             src={item.src}
-            capturedAt={item.capturedAt}
             label={label}
             onError={() => onMediaError(item.id)}
             onLoaded={onMediaLoad ? () => onMediaLoad(item.id) : undefined}

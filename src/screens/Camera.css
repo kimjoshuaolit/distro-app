@@ -65,6 +65,28 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  container-type: size; /* lets the Instax window size itself to the stage */
+}
+
+.camera__window {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+/* The photo viewfinder: the centred Instax Mini shape (46:62) that bakePhoto
+   crops to, as large as the stage allows. Keep in step with RETRO.aspect. */
+.camera__window.is-instax {
+  margin: auto;
+  width: min(100cqw, 100cqh * 46 / 62);
+  height: min(100cqw * 62 / 46, 100cqh);
+}
+
+@media (orientation: landscape) {
+  .camera__window.is-instax {
+    width: min(100cqw, 100cqh * 62 / 46);
+    height: min(100cqw * 46 / 62, 100cqh);
+  }
 }
 
 .camera__viewfinder {
@@ -79,12 +101,6 @@
 /* Selfies preview like a mirror; the saved shot stays true, so text reads right. */
 .camera__viewfinder.is-mirrored {
   transform: scaleX(-1);
-}
-
-/* Today's date, just above the controls: a photo's real corner sits behind them. */
-.camera__stamp {
-  right: var(--space-4);
-  bottom: 100%;
 }
 
 .camera__statusbar {

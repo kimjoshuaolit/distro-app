@@ -10,14 +10,10 @@ export async function capturePhoto(params: {
   video: HTMLVideoElement
   eventId: string
   guestId: string
-  date?: Date
   seed?: number
 }): Promise<Shot> {
   const capturedAt = new Date()
-  const blob = await bakePhoto(params.video, {
-    date: params.date ?? capturedAt,
-    seed: params.seed,
-  })
+  const blob = await bakePhoto(params.video, { seed: params.seed })
   const shot: Shot = {
     id: crypto.randomUUID(),
     eventId: params.eventId,

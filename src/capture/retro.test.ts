@@ -1,20 +1,47 @@
 import { describe, it, expect } from 'vitest'
-import { applyWarmGrade, applyGrain, formatStamp } from './retro.ts'
+import { RETRO, applyInstaxGrade, applyVignette, applyGrain, instaxCrop } from './retro.ts'
 
-describe('applyWarmGrade', () => {
-  it('warms a mid-gray pixel (red up, blue down) and leaves alpha alone', () => {
-    const data = new Uint8ClampedArray([128, 128, 128, 255])
-    applyWarmGrade(data)
-    expect(data[0]).toBeGreaterThan(128) // red boosted
-    expect(data[2]).toBeLessThan(128) // blue reduced
-    expect(data[3]).toBe(255) // alpha untouched
+const px = (r: number, g: number, b: number) => new Uint8ClampedArray([r, g, b, 255])
+
+describe('applyInstaxGrade', () => {
+  it('brightens the mids and leaves alpha alone', () => {
+    const data = px(128, 128, 128)
+    applyInstaxGrade(data)
+    for (const v of data.slice(0, 3)) expect(v).toBeGreaterThan(140)
+    expect(data[3]).toBe(255)
   })
 
-  it('clamps highlights at 255', () => {
-    const data = new Uint8ClampedArray([255, 255, 255, 255])
-    applyWarmGrade(data)
-    expect(data[0]).toBe(255)
-    expect(data[1]).toBe(255)
+  it('prints black as a cool, milky charcoal', () => {
+    const data = px(0, 0, 0)
+    applyInstaxGrade(data)
+    expect(data[0]).toBeGreaterThan(10)
+    expect(data[2]).toBeGreaterThan(data[0]) // blue leads in the shadows
+  })
+
+  it('blooms white to cream instead of clipping it', () => {
+    const data = px(255, 255, 255)
+    applyInstaxGrade(data)
+    expect(data[0]).toBeGreaterThan(data[2]) // warm highlight
+    expect(data[2]).toBeLessThan(255)
+  })
+
+  it('softens saturation', () => {
+    const data = px(200, 60, 60)
+    applyInstaxGrade(data)
+    expect(data[0] - data[1]).toBeLessThan(140)
+  })
+})
+
+describe('applyVignette', () => {
+  it('darkens the corners more than the centre', () => {
+    const w = 9
+    const h = 9
+    const data = new Uint8ClampedArray(w * h * 4).fill(200)
+    applyVignette(data, w, h)
+    const at = (x: number, y: number) => data[(y * w + x) * 4]
+    expect(at(4, 4)).toBe(200)
+    expect(at(0, 0)).toBeLessThan(at(4, 0))
+    expect(at(0, 0)).toBeGreaterThan(200 * (1 - RETRO.vignette) - 1)
   })
 })
 
@@ -38,12 +65,21 @@ describe('applyGrain', () => {
   })
 })
 
-describe('formatStamp', () => {
-  it('formats as a disposable-camera date stamp', () => {
-    expect(formatStamp(new Date(2026, 8, 19))).toBe("'26 09 19")
+describe('instaxCrop', () => {
+  it('trims a tall phone frame top and bottom to the Instax shape', () => {
+    expect(instaxCrop(720, 1280)).toEqual({ x: 0, y: 155, w: 720, h: 970 })
   })
 
-  it('zero-pads month and day', () => {
-    expect(formatStamp(new Date(2027, 0, 3))).toBe("'27 01 03")
+  it('trims the sides of a frame that is wider than the Instax shape', () => {
+    const crop = instaxCrop(480, 640)
+    expect(crop.h).toBe(640)
+    expect(crop.w / crop.h).toBeCloseTo(RETRO.aspect, 2)
+    expect(Math.abs(480 - crop.w - 2 * crop.x)).toBeLessThanOrEqual(1) // centred
+  })
+
+  it('keeps a sideways shot sideways', () => {
+    const crop = instaxCrop(1280, 720)
+    expect(crop.w / crop.h).toBeCloseTo(1 / RETRO.aspect, 2)
+    expect(crop.h).toBe(720)
   })
 })
