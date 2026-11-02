@@ -7,7 +7,7 @@
   padding-block: var(--space-12);
 }
 
-.camera {
+.landing {
   width: 100%;
   max-width: 420px;
   background: var(--gold);
@@ -17,7 +17,7 @@
 }
 
 /* Red top band — model plate + shot counter */
-.camera__band {
+.landing__band {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -28,7 +28,7 @@
   padding: var(--space-3) var(--space-4);
 }
 
-.camera__flash {
+.landing__flash {
   width: 14px;
   height: 14px;
   border-radius: var(--radius-pill);
@@ -37,7 +37,7 @@
   flex: 0 0 auto;
 }
 
-.camera__model {
+.landing__model {
   font-family: var(--font-body);
   font-weight: 700;
   font-size: var(--text-small);
@@ -45,7 +45,7 @@
   text-transform: uppercase;
 }
 
-.camera__counter {
+.landing__counter {
   margin-left: auto;
   font-family: var(--font-display);
   font-size: var(--text-counter);
@@ -55,7 +55,7 @@
 }
 
 /* Dark viewfinder with gold corner brackets + glowing date stamp */
-.camera__viewfinder {
+.landing__viewfinder {
   position: relative;
   margin-top: var(--space-4);
   aspect-ratio: 4 / 3;
@@ -67,8 +67,8 @@
   justify-content: center;
 }
 
-.camera__viewfinder::before,
-.camera__viewfinder::after {
+.landing__viewfinder::before,
+.landing__viewfinder::after {
   content: '';
   position: absolute;
   width: 28px;
@@ -76,21 +76,21 @@
   border: 3px solid var(--gold);
 }
 
-.camera__viewfinder::before {
+.landing__viewfinder::before {
   top: 10px;
   left: 10px;
   border-right: 0;
   border-bottom: 0;
 }
 
-.camera__viewfinder::after {
+.landing__viewfinder::after {
   bottom: 10px;
   right: 10px;
   border-left: 0;
   border-top: 0;
 }
 
-.camera__vf-label {
+.landing__vf-label {
   font-family: var(--font-body);
   font-weight: 700;
   font-size: var(--text-small);
@@ -100,7 +100,7 @@
   opacity: 0.6;
 }
 
-.camera__stamp {
+.landing__stamp {
   position: absolute;
   right: 12px;
   bottom: 10px;
@@ -111,13 +111,13 @@
 }
 
 /* Tactile red shutter with gold ring */
-.camera__controls {
+.landing__controls {
   margin-top: var(--space-4);
   display: flex;
   justify-content: center;
 }
 
-.camera__shutter {
+.landing__shutter {
   width: 64px;
   height: 64px;
   border-radius: var(--radius-pill);
@@ -128,7 +128,7 @@
     0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
-.camera__brand {
+.landing__brand {
   margin: var(--space-4) 0 0;
   text-align: center;
   font-family: var(--font-display);
@@ -140,7 +140,7 @@
   color: var(--ink);
 }
 
-.camera__tagline {
+.landing__tagline {
   margin: var(--space-2) 0 0;
   text-align: center;
   font-family: var(--font-body);
@@ -148,7 +148,7 @@
   color: var(--ink);
 }
 
-.camera__note {
+.landing__note {
   margin: var(--space-2) 0 0;
   text-align: center;
   color: var(--ink);
