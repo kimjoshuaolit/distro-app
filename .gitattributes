@@ -1,0 +1,2 @@
+# Raw data (film LUTs): never touch line endings.
+*.bin binary
