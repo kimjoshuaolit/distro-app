@@ -1,67 +1,167 @@
 import { describe, it, expect } from 'vitest'
-import { RETRO, applyInstaxGrade, applyVignette, applyGrain, instaxCrop } from './retro.ts'
+import {
+  LUT_BYTES,
+  LUT_SIZE,
+  RETRO,
+  aberrate,
+  boxBlur,
+  developFilm,
+  instaxCrop,
+  radius,
+  sampleLut,
+} from './retro.ts'
 
-const px = (r: number, g: number, b: number) => new Uint8ClampedArray([r, g, b, 255])
+/** A LUT that maps every colour to itself. */
+function identityLut(): Uint8Array {
+  const lut = new Uint8Array(LUT_BYTES)
+  const n = LUT_SIZE - 1
+  for (let b = 0; b < LUT_SIZE; b++)
+    for (let g = 0; g < LUT_SIZE; g++)
+      for (let r = 0; r < LUT_SIZE; r++) {
+        const i = ((b * LUT_SIZE + g) * LUT_SIZE + r) * 3
+        lut[i] = Math.round((r / n) * 255)
+        lut[i + 1] = Math.round((g / n) * 255)
+        lut[i + 2] = Math.round((b / n) * 255)
+      }
+  return lut
+}
 
-describe('applyInstaxGrade', () => {
-  it('brightens the mids and leaves alpha alone', () => {
-    const data = px(128, 128, 128)
-    applyInstaxGrade(data)
-    for (const v of data.slice(0, 3)) expect(v).toBeGreaterThan(140)
-    expect(data[3]).toBe(255)
+function frame(w: number, h: number, rgb: [number, number, number]): Uint8ClampedArray {
+  const data = new Uint8ClampedArray(w * h * 4)
+  for (let i = 0; i < data.length; i += 4) data.set([...rgb, 255], i)
+  return data
+}
+
+const mean = (data: Uint8ClampedArray, c: number) => {
+  let sum = 0
+  for (let i = c; i < data.length; i += 4) sum += data[i]
+  return sum / (data.length / 4)
+}
+
+describe('sampleLut', () => {
+  it('passes colours straight through an identity LUT, between grid points too', () => {
+    const out = [0, 0, 0]
+    sampleLut(identityLut(), 0.3, 0.55, 0.9, out)
+    expect(out[0]).toBeCloseTo(0.3, 2)
+    expect(out[1]).toBeCloseTo(0.55, 2)
+    expect(out[2]).toBeCloseTo(0.9, 2)
   })
 
-  it('prints black as a cool, milky charcoal', () => {
-    const data = px(0, 0, 0)
-    applyInstaxGrade(data)
-    expect(data[0]).toBeGreaterThan(10)
-    expect(data[2]).toBeGreaterThan(data[0]) // blue leads in the shadows
+  it('reads the right corner: the blue axis is slowest', () => {
+    const lut = new Uint8Array(LUT_BYTES)
+    lut.set([10, 20, 30], LUT_BYTES - 3) // white maps to a dark blue-grey
+    const out = [0, 0, 0]
+    sampleLut(lut, 1, 1, 1, out)
+    expect(out.map((v) => Math.round(v * 255))).toEqual([10, 20, 30])
   })
 
-  it('blooms white to cream instead of clipping it', () => {
-    const data = px(255, 255, 255)
-    applyInstaxGrade(data)
-    expect(data[0]).toBeGreaterThan(data[2]) // warm highlight
-    expect(data[2]).toBeLessThan(255)
-  })
-
-  it('softens saturation', () => {
-    const data = px(200, 60, 60)
-    applyInstaxGrade(data)
-    expect(data[0] - data[1]).toBeLessThan(140)
+  it('clamps colours outside 0-1', () => {
+    const out = [0, 0, 0]
+    sampleLut(identityLut(), -0.5, 1.5, 0.5, out)
+    expect(out[0]).toBe(0)
+    expect(out[1]).toBe(1)
   })
 })
 
-describe('applyVignette', () => {
-  it('darkens the corners more than the centre', () => {
-    const w = 9
-    const h = 9
-    const data = new Uint8ClampedArray(w * h * 4).fill(200)
-    applyVignette(data, w, h)
-    const at = (x: number, y: number) => data[(y * w + x) * 4]
-    expect(at(4, 4)).toBe(200)
-    expect(at(0, 0)).toBeLessThan(at(4, 0))
-    expect(at(0, 0)).toBeGreaterThan(200 * (1 - RETRO.vignette) - 1)
+describe('boxBlur', () => {
+  it('keeps a flat image flat, edges included', () => {
+    const src = new Float32Array(5 * 4 * 3).fill(0.4)
+    for (const v of boxBlur(src, 5, 4, 2)) expect(v).toBeCloseTo(0.4, 6)
+  })
+
+  it('spreads a bright point and keeps its energy', () => {
+    const w = 21
+    const src = new Float32Array(w * w * 3)
+    src[(10 * w + 10) * 3] = 1
+    const out = boxBlur(src, w, w, 2)
+    let total = 0
+    for (let i = 0; i < out.length; i += 3) total += out[i]
+    expect(total).toBeCloseTo(1, 4)
+    expect(out[(10 * w + 10) * 3]).toBeLessThan(0.2)
+    expect(out[(10 * w + 12) * 3]).toBeGreaterThan(0)
+    expect(out[(10 * w + 10) * 3 + 1]).toBe(0) // other channels untouched
+  })
+
+  it('never blurs by less than a pixel', () => {
+    expect(radius(0.0015, 100)).toBe(1)
+    expect(radius(0.02, 800)).toBe(16)
   })
 })
 
-describe('applyGrain', () => {
-  it('is deterministic for a given seed', () => {
-    const a = new Uint8ClampedArray([100, 100, 100, 255, 100, 100, 100, 255])
-    const b = new Uint8ClampedArray([100, 100, 100, 255, 100, 100, 100, 255])
-    applyGrain(a, 42)
-    applyGrain(b, 42)
+describe('aberrate', () => {
+  it('leaves the centre alone and the blue channel exact', () => {
+    const w = 101
+    const src = new Float32Array(w * w * 3).map((_, i) => (i % 7) / 7)
+    const out = aberrate(src, w, w)
+    const c = (50 * w + 50) * 3
+    expect(out[c]).toBeCloseTo(src[c], 5)
+    for (let i = 2; i < src.length; i += 3) expect(out[i]).toBe(src[i])
+  })
+})
+
+describe('developFilm', () => {
+  it('is deterministic for a given seed and leaves alpha alone', () => {
+    const a = frame(24, 32, [120, 100, 90])
+    const b = frame(24, 32, [120, 100, 90])
+    developFilm(a, 24, 32, identityLut(), 7)
+    developFilm(b, 24, 32, identityLut(), 7)
     expect(Array.from(a)).toEqual(Array.from(b))
+    for (let i = 3; i < a.length; i += 4) expect(a[i]).toBe(255)
   })
 
-  it('differs across seeds and never leaves alpha or invalid values', () => {
-    const a = new Uint8ClampedArray([100, 100, 100, 255])
-    const b = new Uint8ClampedArray([100, 100, 100, 255])
-    applyGrain(a, 1)
-    applyGrain(b, 2)
-    expect(Array.from(a.slice(0, 3))).not.toEqual(Array.from(b.slice(0, 3)))
-    expect(a[3]).toBe(255)
-    for (const v of a) expect(Number.isNaN(v)).toBe(false)
+  it('grains differently per shot', () => {
+    const a = frame(24, 32, [120, 100, 90])
+    const b = frame(24, 32, [120, 100, 90])
+    developFilm(a, 24, 32, null, 1)
+    developFilm(b, 24, 32, null, 2)
+    expect(Array.from(a)).not.toEqual(Array.from(b))
+  })
+
+  it('runs bright, like instant film', () => {
+    const data = frame(40, 40, [100, 100, 100])
+    developFilm(data, 40, 40, identityLut(), 1)
+    expect(mean(data, 1)).toBeGreaterThan(105)
+  })
+
+  it('darkens the corners', () => {
+    const w = 60
+    const data = frame(w, w, [150, 150, 150])
+    developFilm(data, w, w, null, 1)
+    const patch = (x0: number, y0: number) => {
+      let sum = 0
+      for (let y = y0; y < y0 + 6; y++) for (let x = x0; x < x0 + 6; x++) sum += data[(y * w + x) * 4 + 1]
+      return sum / 36
+    }
+    expect(patch(0, 0)).toBeLessThan(patch(27, 27) - 10)
+  })
+
+  it('puts a red halo around a bright light', () => {
+    const w = 200 // the halo's reach scales with the width
+    const data = frame(w, w, [20, 20, 20])
+    for (let y = 90; y < 110; y++) for (let x = 90; x < 110; x++) data.set([255, 255, 255, 255], (y * w + x) * 4)
+    developFilm(data, w, w, null, 1)
+    let red = 0
+    let blue = 0
+    for (let y = 90; y < 110; y++)
+      for (const x of [86, 87, 88, 111, 112, 113]) {
+        red += data[(y * w + x) * 4]
+        blue += data[(y * w + x) * 4 + 2]
+      }
+    expect(red).toBeGreaterThan(blue * 1.15)
+  })
+
+  it('applies the film LUT', () => {
+    const tinted = new Uint8Array(LUT_BYTES)
+    for (let i = 0; i < LUT_BYTES; i += 3) tinted.set([200, 60, 60], i) // everything prints red
+    const data = frame(20, 20, [128, 128, 128])
+    developFilm(data, 20, 20, tinted, 1)
+    expect(mean(data, 0)).toBeGreaterThan(mean(data, 2) + 80)
+  })
+
+  it('never produces values out of range on extreme input', () => {
+    const data = frame(16, 16, [255, 255, 255])
+    developFilm(data, 16, 16, identityLut(), 3)
+    for (const v of data) expect(v >= 0 && v <= 255 && !Number.isNaN(v)).toBe(true)
   })
 })
 

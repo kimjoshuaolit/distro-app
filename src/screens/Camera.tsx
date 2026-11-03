@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Navigate, useNavigate, useParams } from 'react-router-dom'
 import { useCamera } from '../capture/useCamera.ts'
 import { capturePhoto } from '../capture/capturePhoto.ts'
+import { loadFilmLut } from '../capture/filmLut.ts'
 import {
   isDark,
   measureLuma,
@@ -78,6 +79,11 @@ export default function Camera() {
   const [flashMode, setFlashMode] = useState<FlashMode>('auto')
   const [screenFlash, setScreenFlash] = useState(false)
   const clipTorchRef = useRef(false)
+
+  // Fetch the film colour now, so the first shot doesn't wait for it.
+  useEffect(() => {
+    void loadFilmLut()
+  }, [])
 
   // The torch stays on for a whole clip, however the recording ends.
   useEffect(() => {

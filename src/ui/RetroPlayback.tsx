@@ -10,7 +10,7 @@ type Props = {
 }
 
 /**
- * Plays a clip with the Instax look applied at playback (AD-8): grade, grain
+ * Plays a clip with the film look applied at playback (AD-8): colour, grain
  * and vignette are all CSS layers over an untouched file.
  */
 export default function RetroPlayback({ src, label, onError, onLoaded }: Props) {
