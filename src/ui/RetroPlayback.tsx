@@ -9,10 +9,7 @@ type Props = {
   onLoaded?: () => void
 }
 
-/**
- * Plays a clip with the film look applied at playback (AD-8): colour, grain
- * and vignette are all CSS layers over an untouched file.
- */
+/** Plays a clip as recorded, with a tap-to-play button over it. */
 export default function RetroPlayback({ src, label, onError, onLoaded }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null)
   const [playing, setPlaying] = useState(false)
@@ -40,8 +37,6 @@ export default function RetroPlayback({ src, label, onError, onLoaded }: Props) 
         onLoadedMetadata={onLoaded}
         aria-label={label}
       />
-      <div className="retro__grain" aria-hidden="true" />
-      <div className="retro__vignette" aria-hidden="true" />
       <button
         type="button"
         className={`retro__play${playing ? ' is-playing' : ''}`}

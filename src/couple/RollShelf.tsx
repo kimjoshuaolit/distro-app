@@ -41,7 +41,6 @@ function Cover({
         <>
           {/* #t nudges browsers to paint the first frame as a poster. */}
           <video
-            className="retro-grade"
             src={`${media.src}#t=0.1`}
             muted
             playsInline

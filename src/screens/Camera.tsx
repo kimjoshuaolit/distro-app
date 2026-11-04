@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react'
 import { Navigate, useNavigate, useParams } from 'react-router-dom'
 import { useCamera } from '../capture/useCamera.ts'
 import { capturePhoto } from '../capture/capturePhoto.ts'
-import { loadFilmLut } from '../capture/filmLut.ts'
 import {
   isDark,
   measureLuma,
@@ -22,7 +21,6 @@ import Shutter from '../ui/Shutter.tsx'
 import RecordButton from '../ui/RecordButton.tsx'
 import ModeToggle, { type CaptureMode } from '../ui/ModeToggle.tsx'
 import UploadIndicator from '../ui/UploadIndicator.tsx'
-import '../ui/RetroPlayback.css' // the live viewfinder wears the film look (.retro-grade)
 import './Camera.css'
 
 function formatElapsed(ms: number): string {
@@ -79,11 +77,6 @@ export default function Camera() {
   const [flashMode, setFlashMode] = useState<FlashMode>('auto')
   const [screenFlash, setScreenFlash] = useState(false)
   const clipTorchRef = useRef(false)
-
-  // Fetch the film colour now, so the first shot doesn't wait for it.
-  useEffect(() => {
-    void loadFilmLut()
-  }, [])
 
   // The torch stays on for a whole clip, however the recording ends.
   useEffect(() => {
@@ -266,15 +259,13 @@ export default function Camera() {
           <div className={`camera__window${mode === 'photo' ? ' is-instax' : ''}`}>
             <video
               ref={videoRef}
-              className={`camera__viewfinder retro-grade${camera.facingMode === 'user' ? ' is-mirrored' : ''}`}
+              className={`camera__viewfinder${camera.facingMode === 'user' ? ' is-mirrored' : ''}`}
               playsInline
               muted
               autoPlay
               onLoadedData={() => setVideoReady(true)}
             />
-            <div className="retro__vignette" aria-hidden="true" />
           </div>
-          <div className="retro__grain" aria-hidden="true" />
 
           {recorder.recording && (
             <div className="camera__rec" role="status" aria-label="Recording">

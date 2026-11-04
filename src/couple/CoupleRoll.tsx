@@ -70,7 +70,6 @@ function Tile({
           <>
             {/* #t nudges browsers to paint the first frame as a poster. */}
             <video
-              className="retro-grade"
               src={`${media.src}#t=0.1`}
               muted
               playsInline
@@ -91,8 +90,7 @@ function Tile({
 
 /**
  * One guest's roll (2.2): a contact sheet in capture order, numbered, opening
- * the full-frame viewer (swipe / ←→ / Esc; clips get the retro look at
- * playback). Read-only. Media is whatever the couple-tier signer vouched for.
+ * the full-frame viewer (swipe / ←→ / Esc). Read-only. Media is whatever the couple-tier signer vouched for.
  * A deep link shows a roll-level loading or error state until the collection
  * is in.
  */

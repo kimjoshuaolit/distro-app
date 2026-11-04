@@ -5,7 +5,6 @@ const bakePhoto = vi.fn()
 
 vi.mock('./db.ts', () => ({ putShot: (...args: unknown[]) => putShot(...args) }))
 vi.mock('./retro.ts', () => ({ bakePhoto: (...args: unknown[]) => bakePhoto(...args) }))
-vi.mock('./filmLut.ts', () => ({ loadFilmLut: async () => null }))
 
 const { capturePhoto } = await import('./capturePhoto.ts')
 

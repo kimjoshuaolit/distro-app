@@ -1,5 +1,4 @@
 import { bakePhoto } from './retro.ts'
-import { loadFilmLut } from './filmLut.ts'
 import { putShot, type Shot } from './db.ts'
 
 /**
@@ -11,11 +10,9 @@ export async function capturePhoto(params: {
   video: HTMLVideoElement
   eventId: string
   guestId: string
-  seed?: number
 }): Promise<Shot> {
   const capturedAt = new Date()
-  const lut = await loadFilmLut() // usually already loaded; null still bakes
-  const blob = await bakePhoto(params.video, { seed: params.seed, lut })
+  const blob = await bakePhoto(params.video)
   const shot: Shot = {
     id: crypto.randomUUID(),
     eventId: params.eventId,

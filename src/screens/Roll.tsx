@@ -49,7 +49,6 @@ function Tile({ item, onOpen, onMediaError }: { item: ViewItem; onOpen: () => vo
           <>
             {/* #t nudges browsers to paint the first frame as a poster. */}
             <video
-              className="retro-grade"
               src={`${item.src}#t=0.1`}
               muted
               playsInline
