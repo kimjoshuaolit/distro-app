@@ -6,9 +6,11 @@ import {
   aberrate,
   boxBlur,
   developFilm,
+  exposureFor,
   instaxCrop,
   radius,
   sampleLut,
+  shoulder,
 } from './retro.ts'
 
 /** A LUT that maps every colour to itself. */
@@ -117,10 +119,16 @@ describe('developFilm', () => {
     expect(Array.from(a)).not.toEqual(Array.from(b))
   })
 
-  it('runs bright, like instant film', () => {
-    const data = frame(40, 40, [100, 100, 100])
+  it('runs bright in an ordinary dim room, like instant film', () => {
+    const data = frame(40, 40, [70, 70, 70])
     developFilm(data, 40, 40, identityLut(), 1)
-    expect(mean(data, 1)).toBeGreaterThan(105)
+    expect(mean(data, 1)).toBeGreaterThan(75)
+  })
+
+  it('pulls a bright white room down instead of washing it out', () => {
+    const data = frame(40, 40, [230, 230, 228])
+    developFilm(data, 40, 40, identityLut(), 1)
+    expect(mean(data, 1)).toBeLessThan(215)
   })
 
   it('darkens the corners', () => {
@@ -147,7 +155,7 @@ describe('developFilm', () => {
         red += data[(y * w + x) * 4]
         blue += data[(y * w + x) * 4 + 2]
       }
-    expect(red).toBeGreaterThan(blue * 1.15)
+    expect(red).toBeGreaterThan(blue * 1.05) // the neutral glow is there too
   })
 
   it('applies the film LUT', () => {
@@ -162,6 +170,43 @@ describe('developFilm', () => {
     const data = frame(16, 16, [255, 255, 255])
     developFilm(data, 16, 16, identityLut(), 3)
     for (const v of data) expect(v >= 0 && v <= 255 && !Number.isNaN(v)).toBe(true)
+  })
+})
+
+describe('exposureFor', () => {
+  const flat = (v: number) => new Float32Array(30).fill(v) // linear light
+
+  it('gives dim and ordinary scenes the full film lift', () => {
+    expect(exposureFor(flat(0.03))).toBe(RETRO.exposure)
+    expect(exposureFor(flat(RETRO.brightKey))).toBeCloseTo(RETRO.exposure, 2)
+  })
+
+  it('pulls brighter scenes down further the brighter they are, up to a limit', () => {
+    const bright = exposureFor(flat(0.2))
+    const brighter = exposureFor(flat(0.4))
+    expect(bright).toBeLessThan(RETRO.exposure)
+    expect(brighter).toBeLessThan(bright)
+    expect(exposureFor(flat(1))).toBe(RETRO.exposure - RETRO.brightPullMax)
+  })
+
+  it('judges on the gist, so one bright lamp does not darken a dim room', () => {
+    const room = flat(0.03)
+    room.fill(1, 0, 3) // one hot pixel in ten
+    expect(exposureFor(room)).toBe(RETRO.exposure)
+  })
+})
+
+describe('shoulder', () => {
+  it('leaves everything below the knee alone', () => {
+    expect(shoulder(0.3)).toBe(0.3)
+    expect(shoulder(RETRO.shoulder)).toBe(RETRO.shoulder)
+  })
+
+  it('rolls highlights toward white without ever reaching or passing it', () => {
+    expect(shoulder(0.9)).toBeLessThan(0.9)
+    expect(shoulder(0.9)).toBeGreaterThan(shoulder(0.8))
+    expect(shoulder(3)).toBeLessThan(1)
+    expect(shoulder(3)).toBeGreaterThan(shoulder(1.5))
   })
 })
 

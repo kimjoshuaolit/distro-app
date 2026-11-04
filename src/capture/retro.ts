@@ -1,7 +1,8 @@
 // The retro "bake" (AD-8): photos are developed like an instant film shot on
 // a cheap plastic camera. The colour comes from a film LUT measured from Fuji
 // FP-100C instant film (see film/README.md); the camera comes from simple
-// optics: a little over-exposure, colour fringing, softness, glow, red
+// optics: a little over-exposure (pulled back for bright scenes), soft
+// highlight roll-off, colour fringing, softness, glow, red
 // halation around highlights, corner falloff, and clumpy grain. Everything is
 // cropped to the Instax Mini image shape and saved as a compressed JPEG.
 // Pixel maths is pure and deterministic (unit-tested); the canvas
@@ -14,16 +15,23 @@ export const RETRO = {
   maxEdge: 1600, // long-edge downscale target
   jpegQuality: 0.85,
   aspect: 46 / 62, // Instax Mini image area, short edge over long edge
-  exposure: 0.15, // stops brighter: instant film runs bright
+  exposure: 0.3, // stops brighter: instant film runs bright...
+  brightKey: 0.09, // ...but a scene whose average (log) brightness is above this
+  brightPull: 0.9, // is pulled back down by this share of the difference, in stops,
+  brightPullMax: 1.5, // up to this: a bright white room shouldn't wash out
   aberration: 0.0018, // red and green magnified a touch more than blue: colour fringes
   soft: 0.45, // share of a slightly blurred copy mixed in: a cheap lens
   softRadius: 0.0015,
-  bloom: 0.14, // glow added around everything bright
+  // Glow and halation move light out of bright spots into their surroundings;
+  // they don't add any. A flat white wall stays as it was, a lamp glows.
+  bloom: 0.5, // share of the bright light spread into a soft glow
   bloomRadius: 0.02,
-  halation: 0.44, // red halo around hot highlights, from light scattering in the film
+  bloomFrom: 0.35, // linear brightness where light starts to glow
+  halation: 0.6, // red halo around hot highlights, from light scattering in the film
   halationRadius: 0.012,
-  halationFrom: 0.55, // linear brightness where highlights start to halate
+  halationFrom: 0.7, // linear brightness where highlights start to halate
   halationTint: [1, 0.32, 0.12],
+  shoulder: 0.7, // linear brightness where highlights start to roll off instead of clipping
   vignette: 0.32, // brightness lost in the far corners
   grain: 0.045, // grain strength, 0-1 scale
   grainSize: 1.6, // pixels per grain clump
@@ -166,6 +174,49 @@ function gaussian(rand: () => number): () => number {
 }
 
 /**
+ * Stops of exposure for a frame in linear light: the film's usual lift, less a
+ * pull for bright scenes, judged on log-average brightness so one lamp
+ * doesn't darken a dim room. Sampled sparsely: it only needs the gist.
+ */
+export function exposureFor(lin: Float32Array): number {
+  const pixels = lin.length / 3
+  const step = Math.max(1, Math.floor(pixels / 4096))
+  let sum = 0
+  let count = 0
+  for (let p = 0; p < pixels; p += step) {
+    sum += Math.log(1e-4 + luma(lin[p * 3], lin[p * 3 + 1], lin[p * 3 + 2]))
+    count++
+  }
+  if (!count) return RETRO.exposure
+  const key = Math.exp(sum / count)
+  const over = Math.log2(key / RETRO.brightKey)
+  return RETRO.exposure - Math.min(RETRO.brightPullMax, Math.max(0, over * RETRO.brightPull))
+}
+
+/**
+ * Move part of the light above `from` out into a blur around it, per channel
+ * by `amount`. Energy-preserving: flat areas don't change, edges of bright
+ * things bleed into their surroundings.
+ */
+function spread(lin: Float32Array, w: number, h: number, from: number, r: number, amount: number[]): void {
+  const hot = new Float32Array(lin.length)
+  for (let i = 0; i < lin.length; i += 3) {
+    const k = Math.min(1, Math.max(0, (luma(lin[i], lin[i + 1], lin[i + 2]) - from) / (1 - from)))
+    hot[i] = lin[i] * k
+    hot[i + 1] = lin[i + 1] * k
+    hot[i + 2] = lin[i + 2] * k
+  }
+  const glow = boxBlur(hot, w, h, radius(r, w))
+  for (let i = 0; i < lin.length; i++) lin[i] += (glow[i] - hot[i]) * amount[i % 3]
+}
+
+/** Roll highlights off smoothly toward white instead of clipping them flat. */
+export function shoulder(v: number): number {
+  const k = RETRO.shoulder
+  return v <= k ? v : k + (1 - k) * (1 - Math.exp(-(v - k) / (1 - k)))
+}
+
+/**
  * Develop the frame in place: optics in linear light, then the film LUT, then
  * grain. `lut` may be null (it failed to load): the shot still gets the
  * camera's character, just without the film colour. Never throws on content.
@@ -178,36 +229,28 @@ export function developFilm(
   seed: number,
 ): void {
   const n = w * h
-  const gain = 2 ** RETRO.exposure
   let lin: Float32Array = new Float32Array(n * 3)
   for (let p = 0; p < n; p++) {
-    lin[p * 3] = TO_LINEAR[data[p * 4]] * gain
-    lin[p * 3 + 1] = TO_LINEAR[data[p * 4 + 1]] * gain
-    lin[p * 3 + 2] = TO_LINEAR[data[p * 4 + 2]] * gain
+    lin[p * 3] = TO_LINEAR[data[p * 4]]
+    lin[p * 3 + 1] = TO_LINEAR[data[p * 4 + 1]]
+    lin[p * 3 + 2] = TO_LINEAR[data[p * 4 + 2]]
   }
+  const gain = 2 ** exposureFor(lin)
+  for (let i = 0; i < lin.length; i++) lin[i] *= gain
 
   // The lens: fringes, softness, glow.
   lin = aberrate(lin, w, h)
   const soft = boxBlur(lin, w, h, radius(RETRO.softRadius, w))
   for (let i = 0; i < lin.length; i++) lin[i] += (soft[i] - lin[i]) * RETRO.soft
-  const bloom = boxBlur(lin, w, h, radius(RETRO.bloomRadius, w))
-  for (let i = 0; i < lin.length; i++) lin[i] += bloom[i] * RETRO.bloom
+  spread(lin, w, h, RETRO.bloomFrom, RETRO.bloomRadius, [RETRO.bloom, RETRO.bloom, RETRO.bloom])
 
   // The film: highlights scatter red light back into the emulsion.
-  const hot = new Float32Array(lin.length)
-  for (let i = 0; i < lin.length; i += 3) {
-    const k = Math.min(1, Math.max(0, (luma(lin[i], lin[i + 1], lin[i + 2]) - RETRO.halationFrom) / (1 - RETRO.halationFrom)))
-    hot[i] = lin[i] * k
-    hot[i + 1] = lin[i + 1] * k
-    hot[i + 2] = lin[i + 2] * k
-  }
-  const halo = boxBlur(hot, w, h, radius(RETRO.halationRadius, w))
   const [tr, tg, tb] = RETRO.halationTint
-  for (let i = 0; i < lin.length; i += 3) {
-    lin[i] += halo[i] * tr * RETRO.halation
-    lin[i + 1] += halo[i + 1] * tg * RETRO.halation
-    lin[i + 2] += halo[i + 2] * tb * RETRO.halation
-  }
+  spread(lin, w, h, RETRO.halationFrom, RETRO.halationRadius, [
+    tr * RETRO.halation,
+    tg * RETRO.halation,
+    tb * RETRO.halation,
+  ])
 
   // Grain clumps: coarse noise, smoothed up to full size.
   const rand = mulberry32(seed)
@@ -239,9 +282,9 @@ export function developFilm(
       const d = (dx * dx + dy * dy) / 2 // 0 at the centre, 1 in a corner
       const fall = 1 - RETRO.vignette * d ** 1.5
       const p = y * w + x
-      const r = toSrgb(lin[p * 3] * fall)
-      const g = toSrgb(lin[p * 3 + 1] * fall)
-      const b = toSrgb(lin[p * 3 + 2] * fall)
+      const r = toSrgb(shoulder(lin[p * 3] * fall))
+      const g = toSrgb(shoulder(lin[p * 3 + 1] * fall))
+      const b = toSrgb(shoulder(lin[p * 3 + 2] * fall))
       if (lut) sampleLut(lut, r, g, b, film)
       else {
         film[0] = r
