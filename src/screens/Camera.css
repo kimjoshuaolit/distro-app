@@ -195,6 +195,24 @@
   color: var(--on-dark);
 }
 
+/* Shots still on the phone only upload while this page is open: make that
+   impossible to miss, then calm once everything's saved. */
+.camera__finished-note {
+  margin: var(--space-4) 0 0;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md, 10px);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  color: var(--on-dark);
+  font-size: 0.95rem;
+}
+
+.camera__finished-note.is-waiting {
+  border: 2px solid var(--gold);
+  background: rgba(0, 0, 0, 0.35);
+  color: var(--gold);
+  font-weight: 700;
+}
+
 .camera__error {
   position: absolute;
   z-index: 3;

@@ -21,7 +21,19 @@ import Shutter from '../ui/Shutter.tsx'
 import RecordButton from '../ui/RecordButton.tsx'
 import ModeToggle, { type CaptureMode } from '../ui/ModeToggle.tsx'
 import UploadIndicator from '../ui/UploadIndicator.tsx'
+import { uploadNote } from '../capture/uploadNote.ts'
 import './Camera.css'
+
+/** The done-shooting banner's upload line: loud while shots are still on the phone. */
+function UploadNote({ note }: { note: ReturnType<typeof uploadNote> }) {
+  if (!note) return null
+  return (
+    <p className={`camera__finished-note${note.waiting ? ' is-waiting' : ''}`} aria-live="polite">
+      {note.waiting ? '' : '✓ '}
+      {note.text}
+    </p>
+  )
+}
 
 function formatElapsed(ms: number): string {
   const s = Math.min(10, Math.floor(ms / 1000))
@@ -193,6 +205,7 @@ export default function Camera() {
   const photosFinished = photos <= 0
   const clipsFinished = clips <= 0
   const currentFinished = mode === 'photo' ? photosFinished : clipsFinished
+  const leaveNote = uploadNote(uploader.state, uploader.pendingCount)
 
   return (
     <main className="camera">
@@ -284,11 +297,12 @@ export default function Camera() {
               </p>
               <p className="camera__finished-body">
                 {lock === 'closed'
-                  ? 'Thanks for shooting! Any shots still uploading will finish on their own.'
+                  ? 'Thanks for shooting!'
                   : opensAt
                     ? `It opens ${new Date(opensAt).toLocaleString(undefined, { weekday: 'short', hour: 'numeric', minute: '2-digit' })} — keep this page handy.`
                     : 'It opens when the celebration starts — keep this page handy.'}
               </p>
+              {lock === 'closed' && <UploadNote note={leaveNote} />}
             </div>
           )}
 
@@ -300,6 +314,7 @@ export default function Camera() {
               <p className="camera__finished-body">
                 {mode === 'photo' ? 'That’s all 25 — nicely shot.' : 'All 5 clips captured.'}
               </p>
+              <UploadNote note={leaveNote} />
             </div>
           )}
 

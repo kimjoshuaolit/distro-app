@@ -124,6 +124,7 @@ export default function TableCards({ eventId }: { eventId: string }) {
             <p className="card__lead">Scan for your disposable camera</p>
             <img className="card__qr" src={loaded.svgUrl} alt={`QR code that opens ${loaded.url}`} />
             <p className="card__rules">25 photos · 5 clips · no app, no retakes</p>
+            <p className="card__note">Before you leave, open your camera once more until it says “All saved”.</p>
             <p className="card__foot">Make ’em count 📸</p>
           </article>
         ))}

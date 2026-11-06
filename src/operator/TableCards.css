@@ -66,6 +66,14 @@
   font-size: 3.2mm;
 }
 
+.card__note {
+  margin: 2mm 0 0;
+  font-size: 2.8mm;
+  line-height: 1.3;
+  color: #5c5040;
+  text-align: center;
+}
+
 .card__foot {
   margin: auto 0 0;
   font-size: 3.2mm;
@@ -92,6 +100,7 @@
 
   .card__lead,
   .card__rules,
+  .card__note,
   .card__foot {
     font-size: 2.8vw;
   }
