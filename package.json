@@ -17,7 +17,9 @@
     "montage:upload:prod": "node --env-file-if-exists=supabase/functions/.env.production scripts/upload-montage.ts",
     "operator:add": "node --env-file-if-exists=supabase/functions/.env scripts/add-operator.ts",
     "operator:add:prod": "node --env-file-if-exists=supabase/functions/.env.production scripts/add-operator.ts",
-    "smoke:prod": "node --env-file-if-exists=supabase/functions/.env.production scripts/smoke.ts"
+    "load:test": "node --env-file-if-exists=.env scripts/load-test.ts",
+    "load:test:prod": "node --env-file-if-exists=supabase/functions/.env.production scripts/load-test.ts",
+    "smoke:prod":"node --env-file-if-exists=supabase/functions/.env.production scripts/smoke.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.113.0",

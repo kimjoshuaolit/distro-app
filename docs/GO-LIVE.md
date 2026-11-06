@@ -267,6 +267,30 @@ shows the full guest and reveal links. Then:
 Write down anything odd (phone model + what happened) and bring it back. The
 rehearsal is for exactly that.
 
+### Optional: a crowd test (100 simulated guests)
+
+`scripts/load-test.ts` acts like 100 guests at once, with no phones: they join
+over 30 s, all shoot together, then upload a full 25 + 5 roll each. It checks
+that every shot lands, that the 25/5 limit holds, that a re-sent shot isn't
+counted twice, and that each guest sees only their own roll. It prints PASS or FAIL.
+
+1. Create **another test event** (e.g. "Crowd test"), open now. **Never the
+   wedding's event:** this adds 100 "Load 001…" guests and 3,000 placeholder
+   shots (not real pictures) to the event you name.
+2. Add the public anon key to `supabase/functions/.env.production` as
+   `SUPABASE_ANON_KEY=` (Supabase → Project Settings → API keys, the legacy
+   `anon` key; it's the same public key the site already ships to phones).
+3. Run it. `--live` is required for anything that isn't your local Supabase:
+   ```
+   npm run load:test:prod -- <eventId> --live
+   ```
+   About 1.2 GB goes up from your computer (5 clips × 2 MB per guest). On slow
+   home upload, add `--clip-mb 0.5`. `--guests`, `--ramp` and `--pace`
+   change the crowd; run it with no arguments to see them.
+
+Locally (`npm run load:test -- <eventId>`) it runs against `npx supabase start`
+plus `npx supabase functions serve`.
+
 ## 10. Before the wedding
 
 - [ ] Create the **real event**: couple names, the couple's emails, and a window from the ceremony to the end of the afterparty.
